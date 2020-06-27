@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Globalization;
+using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Sftp
 {
@@ -13,45 +13,45 @@ namespace Renci.SshNet.Sftp
     {
         #region Bitmask constats
 
-        private static UInt32 S_IFMT = 0xF000;  //  bitmask for the file type bitfields
+        private const uint S_IFMT = 0xF000; //  bitmask for the file type bitfields
 
-        private static UInt32 S_IFSOCK = 0xC000;  //	socket
+        private const uint S_IFSOCK = 0xC000; //	socket
 
-        private static UInt32 S_IFLNK = 0xA000;  //	symbolic link
+        private const uint S_IFLNK = 0xA000; //	symbolic link
 
-        private static UInt32 S_IFREG = 0x8000;  //	regular file
+        private const uint S_IFREG = 0x8000; //	regular file
 
-        private static UInt32 S_IFBLK = 0x6000;  //	block device
+        private const uint S_IFBLK = 0x6000; //	block device
 
-        private static UInt32 S_IFDIR = 0x4000;  //	directory
+        private const uint S_IFDIR = 0x4000; //	directory
 
-        private static UInt32 S_IFCHR = 0x2000;  //	character device
+        private const uint S_IFCHR = 0x2000; //	character device
 
-        private static UInt32 S_IFIFO = 0x1000;  //	FIFO
+        private const uint S_IFIFO = 0x1000; //	FIFO
 
-        private static UInt32 S_ISUID = 0x0800;  //	set UID bit
+        private const uint S_ISUID = 0x0800; //	set UID bit
 
-        private static UInt32 S_ISGID = 0x0400;  //	set-group-ID bit (see below)
+        private const uint S_ISGID = 0x0400; //	set-group-ID bit (see below)
 
-        private static UInt32 S_ISVTX = 0x0200;  //	sticky bit (see below)
+        private const uint S_ISVTX = 0x0200; //	sticky bit (see below)
 
-        private static UInt32 S_IRUSR = 0x0100;  //	owner has read permission
+        private const uint S_IRUSR = 0x0100; //	owner has read permission
 
-        private static UInt32 S_IWUSR = 0x0080;  //	owner has write permission
+        private const uint S_IWUSR = 0x0080; //	owner has write permission
 
-        private static UInt32 S_IXUSR = 0x0040;  //	owner has execute permission
+        private const uint S_IXUSR = 0x0040; //	owner has execute permission
 
-        private static UInt32 S_IRGRP = 0x0020;  //	group has read permission
+        private const uint S_IRGRP = 0x0020; //	group has read permission
 
-        private static UInt32 S_IWGRP = 0x0010;  //	group has write permission
+        private const uint S_IWGRP = 0x0010; //	group has write permission
 
-        private static UInt32 S_IXGRP = 0x0008;  //	group has execute permission
+        private const uint S_IXGRP = 0x0008; //	group has execute permission
 
-        private static UInt32 S_IROTH = 0x0004;  //	others have read permission
+        private const uint S_IROTH = 0x0004; //	others have read permission
 
-        private static UInt32 S_IWOTH = 0x0002;  //	others have write permission
+        private const uint S_IWOTH = 0x0002; //	others have write permission
 
-        private static UInt32 S_IXOTH = 0x0001;  //	others have execute permission
+        private const uint S_IXOTH = 0x0001; //	others have execute permission
 
         #endregion
 
@@ -60,13 +60,56 @@ namespace Renci.SshNet.Sftp
         private bool _isGroupIDBitSet;
         private bool _isStickyBitSet;
 
+        private readonly DateTime _originalLastAccessTime;
+        private readonly DateTime _originalLastWriteTime;
+        private readonly long _originalSize;
+        private readonly int _originalUserId;
+        private readonly int _originalGroupId;
+        private readonly uint _originalPermissions;
+        private readonly IDictionary<string, string> _originalExtensions;
+
+        internal bool IsLastAccessTimeChanged
+        {
+            get { return _originalLastAccessTime != LastAccessTime; }
+        }
+
+        internal bool IsLastWriteTimeChanged
+        {
+            get { return _originalLastWriteTime != LastWriteTime; }
+        }
+
+        internal bool IsSizeChanged
+        {
+            get { return _originalSize != Size; }
+        }
+
+        internal bool IsUserIdChanged
+        {
+            get { return _originalUserId != UserId; }
+        }
+
+        internal bool IsGroupIdChanged
+        {
+            get { return _originalGroupId != GroupId; }
+        }
+
+        internal bool IsPermissionsChanged
+        {
+            get { return _originalPermissions != Permissions; }
+        }
+
+        internal bool IsExtensionsChanged
+        {
+            get { return _originalExtensions != null && Extensions != null && !_originalExtensions.SequenceEqual(Extensions); }
+        }
+
         /// <summary>
         /// Gets or sets the time the current file or directory was last accessed.
         /// </summary>
         /// <value>
         /// The time that the current file or directory was last accessed.
         /// </value>
-        public DateTime LastAccessTime { get; private set; }
+        public DateTime LastAccessTime { get; set; }
 
         /// <summary>
         /// Gets or sets the time when the current file or directory was last written to.
@@ -74,7 +117,7 @@ namespace Renci.SshNet.Sftp
         /// <value>
         /// The time the current file was last written.
         /// </value>
-        public DateTime LastWriteTime { get; private set; }
+        public DateTime LastWriteTime { get; set; }
 
         /// <summary>
         /// Gets or sets the size, in bytes, of the current file.
@@ -242,134 +285,125 @@ namespace Renci.SshNet.Sftp
             {
                 uint permission = 0;
 
-                if (this._isBitFiledsBitSet)
+                if (_isBitFiledsBitSet)
                     permission = permission | S_IFMT;
 
-                if (this.IsSocket)
+                if (IsSocket)
                     permission = permission | S_IFSOCK;
 
-                if (this.IsSymbolicLink)
+                if (IsSymbolicLink)
                     permission = permission | S_IFLNK;
 
-                if (this.IsRegularFile)
+                if (IsRegularFile)
                     permission = permission | S_IFREG;
 
-                if (this.IsBlockDevice)
+                if (IsBlockDevice)
                     permission = permission | S_IFBLK;
 
-                if (this.IsDirectory)
+                if (IsDirectory)
                     permission = permission | S_IFDIR;
 
-                if (this.IsCharacterDevice)
+                if (IsCharacterDevice)
                     permission = permission | S_IFCHR;
 
-                if (this.IsNamedPipe)
+                if (IsNamedPipe)
                     permission = permission | S_IFIFO;
 
-                if (this._isUIDBitSet)
+                if (_isUIDBitSet)
                     permission = permission | S_ISUID;
 
-                if (this._isGroupIDBitSet)
+                if (_isGroupIDBitSet)
                     permission = permission | S_ISGID;
 
-                if (this._isStickyBitSet)
+                if (_isStickyBitSet)
                     permission = permission | S_ISVTX;
 
-                if (this.OwnerCanRead)
+                if (OwnerCanRead)
                     permission = permission | S_IRUSR;
 
-                if (this.OwnerCanWrite)
+                if (OwnerCanWrite)
                     permission = permission | S_IWUSR;
 
-                if (this.OwnerCanExecute)
+                if (OwnerCanExecute)
                     permission = permission | S_IXUSR;
 
-                if (this.GroupCanRead)
+                if (GroupCanRead)
                     permission = permission | S_IRGRP;
 
-                if (this.GroupCanWrite)
+                if (GroupCanWrite)
                     permission = permission | S_IWGRP;
 
-                if (this.GroupCanExecute)
+                if (GroupCanExecute)
                     permission = permission | S_IXGRP;
 
-                if (this.OthersCanRead)
+                if (OthersCanRead)
                     permission = permission | S_IROTH;
 
-                if (this.OthersCanWrite)
+                if (OthersCanWrite)
                     permission = permission | S_IWOTH;
 
-                if (this.OthersCanExecute)
+                if (OthersCanExecute)
                     permission = permission | S_IXOTH;
 
                 return permission;
             }
-
             private set
             {
-                this._isBitFiledsBitSet = ((value & S_IFMT) == S_IFMT);
+                _isBitFiledsBitSet = ((value & S_IFMT) == S_IFMT);
 
-                this.IsSocket = ((value & S_IFSOCK) == S_IFSOCK);
+                IsSocket = ((value & S_IFSOCK) == S_IFSOCK);
 
-                this.IsSymbolicLink = ((value & S_IFLNK) == S_IFLNK);
+                IsSymbolicLink = ((value & S_IFLNK) == S_IFLNK);
 
-                this.IsRegularFile = ((value & S_IFREG) == S_IFREG);
+                IsRegularFile = ((value & S_IFREG) == S_IFREG);
 
-                this.IsBlockDevice = ((value & S_IFBLK) == S_IFBLK);
+                IsBlockDevice = ((value & S_IFBLK) == S_IFBLK);
 
-                this.IsDirectory = ((value & S_IFDIR) == S_IFDIR);
+                IsDirectory = ((value & S_IFDIR) == S_IFDIR);
 
-                this.IsCharacterDevice = ((value & S_IFCHR) == S_IFCHR);
+                IsCharacterDevice = ((value & S_IFCHR) == S_IFCHR);
 
-                this.IsNamedPipe = ((value & S_IFIFO) == S_IFIFO);
+                IsNamedPipe = ((value & S_IFIFO) == S_IFIFO);
 
-                this._isUIDBitSet = ((value & S_ISUID) == S_ISUID);
+                _isUIDBitSet = ((value & S_ISUID) == S_ISUID);
 
-                this._isGroupIDBitSet = ((value & S_ISGID) == S_ISGID);
+                _isGroupIDBitSet = ((value & S_ISGID) == S_ISGID);
 
-                this._isStickyBitSet = ((value & S_ISVTX) == S_ISVTX);
+                _isStickyBitSet = ((value & S_ISVTX) == S_ISVTX);
 
-                this.OwnerCanRead = ((value & S_IRUSR) == S_IRUSR);
+                OwnerCanRead = ((value & S_IRUSR) == S_IRUSR);
 
-                this.OwnerCanWrite = ((value & S_IWUSR) == S_IWUSR);
+                OwnerCanWrite = ((value & S_IWUSR) == S_IWUSR);
 
-                this.OwnerCanExecute = ((value & S_IXUSR) == S_IXUSR);
+                OwnerCanExecute = ((value & S_IXUSR) == S_IXUSR);
 
-                this.GroupCanRead = ((value & S_IRGRP) == S_IRGRP);
+                GroupCanRead = ((value & S_IRGRP) == S_IRGRP);
 
-                this.GroupCanWrite = ((value & S_IWGRP) == S_IWGRP);
+                GroupCanWrite = ((value & S_IWGRP) == S_IWGRP);
 
-                this.GroupCanExecute = ((value & S_IXGRP) == S_IXGRP);
+                GroupCanExecute = ((value & S_IXGRP) == S_IXGRP);
 
-                this.OthersCanRead = ((value & S_IROTH) == S_IROTH);
+                OthersCanRead = ((value & S_IROTH) == S_IROTH);
 
-                this.OthersCanWrite = ((value & S_IWOTH) == S_IWOTH);
+                OthersCanWrite = ((value & S_IWOTH) == S_IWOTH);
 
-                this.OthersCanExecute = ((value & S_IXOTH) == S_IXOTH);
+                OthersCanExecute = ((value & S_IXOTH) == S_IXOTH);
             }
         }
 
-        private static SftpFileAttributes _empty = new SftpFileAttributes(DateTime.MinValue, DateTime.MinValue, -1, -1, -1, 0, null);
-        /// <summary>
-        /// Gets the empty SftpFileAttributes instance.
-        /// </summary>
-        public static SftpFileAttributes Empty
+        private SftpFileAttributes()
         {
-            get
-            {
-                return SftpFileAttributes._empty;
-            }
         }
 
-        public SftpFileAttributes(DateTime lastAccessTime, DateTime lastWriteTime, long size, int userId, int groupId, uint permissions, IDictionary<string, string> extensions)
+        internal SftpFileAttributes(DateTime lastAccessTime, DateTime lastWriteTime, long size, int userId, int groupId, uint permissions, IDictionary<string, string> extensions)
         {
-            this.LastAccessTime = lastAccessTime;
-            this.LastWriteTime = lastWriteTime;
-            this.Size = size;
-            this.UserId = userId;
-            this.GroupId = groupId;
-            this.Permissions = permissions;
-            this.Extensions = extensions;
+            LastAccessTime = _originalLastAccessTime = lastAccessTime;
+            LastWriteTime = _originalLastWriteTime = lastWriteTime;
+            Size = _originalSize = size;
+            UserId = _originalUserId = userId;
+            GroupId = _originalGroupId = groupId;
+            Permissions = _originalPermissions = permissions;
+            Extensions = _originalExtensions = extensions;
         }
 
         /// <summary>
@@ -383,21 +417,160 @@ namespace Renci.SshNet.Sftp
                 throw new ArgumentOutOfRangeException("mode");
             }
 
-            var modeBytes = mode.ToString(CultureInfo.InvariantCulture).PadLeft(3,'0').ToArray();
+            var modeBytes = mode.ToString(CultureInfo.InvariantCulture).PadLeft(3, '0').ToCharArray();
 
             var permission = (modeBytes[0] & 0x0F) * 8 * 8 + (modeBytes[1] & 0x0F) * 8 + (modeBytes[2] & 0x0F);
 
-            this.OwnerCanRead = (permission & S_IRUSR) == S_IRUSR;
-            this.OwnerCanWrite = (permission & S_IWUSR) == S_IWUSR;
-            this.OwnerCanExecute = (permission & S_IXUSR) == S_IXUSR;
+            OwnerCanRead = (permission & S_IRUSR) == S_IRUSR;
+            OwnerCanWrite = (permission & S_IWUSR) == S_IWUSR;
+            OwnerCanExecute = (permission & S_IXUSR) == S_IXUSR;
 
-            this.GroupCanRead = (permission & S_IRGRP) == S_IRGRP;
-            this.GroupCanWrite = (permission & S_IWGRP) == S_IWGRP;
-            this.GroupCanExecute = (permission & S_IXGRP) == S_IXGRP;
+            GroupCanRead = (permission & S_IRGRP) == S_IRGRP;
+            GroupCanWrite = (permission & S_IWGRP) == S_IWGRP;
+            GroupCanExecute = (permission & S_IXGRP) == S_IXGRP;
 
-            this.OthersCanRead = (permission & S_IROTH) == S_IROTH;
-            this.OthersCanWrite = (permission & S_IWOTH) == S_IWOTH;
-            this.OthersCanExecute = (permission & S_IXOTH) == S_IXOTH;
+            OthersCanRead = (permission & S_IROTH) == S_IROTH;
+            OthersCanWrite = (permission & S_IWOTH) == S_IWOTH;
+            OthersCanExecute = (permission & S_IXOTH) == S_IXOTH;
+        }
+
+        /// <summary>
+        /// Returns a byte array representing the current <see cref="SftpFileAttributes"/>.
+        /// </summary>
+        /// <returns>
+        /// A byte array representing the current <see cref="SftpFileAttributes"/>.
+        /// </returns>
+        public byte[] GetBytes()
+        {
+            var stream = new SshDataStream(4);
+
+            uint flag = 0;
+
+            if (IsSizeChanged && IsRegularFile)
+            {
+                flag |= 0x00000001;
+            }
+
+            if (IsUserIdChanged || IsGroupIdChanged)
+            {
+                flag |= 0x00000002;
+            }
+
+            if (IsPermissionsChanged)
+            {
+                flag |= 0x00000004;
+            }
+
+            if (IsLastAccessTimeChanged || IsLastWriteTimeChanged)
+            {
+                flag |= 0x00000008;
+            }
+
+            if (IsExtensionsChanged)
+            {
+                flag |= 0x80000000;
+            }
+
+            stream.Write(flag);
+
+            if (IsSizeChanged && IsRegularFile)
+            {
+                stream.Write((ulong) Size);
+            }
+
+            if (IsUserIdChanged || IsGroupIdChanged)
+            {
+                stream.Write((uint) UserId);
+                stream.Write((uint) GroupId);
+            }
+
+            if (IsPermissionsChanged)
+            {
+                stream.Write(Permissions);
+            }
+
+            if (IsLastAccessTimeChanged || IsLastWriteTimeChanged)
+            {
+                var time = (uint)(LastAccessTime.ToFileTime() / 10000000 - 11644473600);
+                stream.Write(time);
+                time = (uint)(LastWriteTime.ToFileTime() / 10000000 - 11644473600);
+                stream.Write(time);
+            }
+
+            if (IsExtensionsChanged)
+            {
+                foreach (var item in Extensions)
+                {
+                    // TODO: we write as ASCII but read as UTF8 !!!
+
+                    stream.Write(item.Key, SshData.Ascii);
+                    stream.Write(item.Value, SshData.Ascii);
+                }
+            }
+
+            return stream.ToArray();
+        }
+
+        internal static readonly SftpFileAttributes Empty = new SftpFileAttributes();
+
+        internal static SftpFileAttributes FromBytes(SshDataStream stream)
+        {
+            var flag = stream.ReadUInt32();
+
+            long size = -1;
+            var userId = -1;
+            var groupId = -1;
+            uint permissions = 0;
+            var accessTime = DateTime.MinValue;
+            var modifyTime = DateTime.MinValue;
+            IDictionary<string, string> extensions = null;
+
+            if ((flag & 0x00000001) == 0x00000001)   //  SSH_FILEXFER_ATTR_SIZE
+            {
+                size = (long) stream.ReadUInt64();
+            }
+
+            if ((flag & 0x00000002) == 0x00000002)   //  SSH_FILEXFER_ATTR_UIDGID
+            {
+                userId = (int) stream.ReadUInt32();
+
+                groupId = (int) stream.ReadUInt32();
+            }
+
+            if ((flag & 0x00000004) == 0x00000004)   //  SSH_FILEXFER_ATTR_PERMISSIONS
+            {
+                permissions = stream.ReadUInt32();
+            }
+
+            if ((flag & 0x00000008) == 0x00000008)   //  SSH_FILEXFER_ATTR_ACMODTIME
+            {
+                var time = stream.ReadUInt32();
+                accessTime = DateTime.FromFileTime((time + 11644473600) * 10000000);
+                time = stream.ReadUInt32();
+                modifyTime = DateTime.FromFileTime((time + 11644473600) * 10000000);
+            }
+
+            if ((flag & 0x80000000) == 0x80000000)   //  SSH_FILEXFER_ATTR_EXTENDED
+            {
+                var extendedCount = (int) stream.ReadUInt32();
+                extensions = new Dictionary<string, string>(extendedCount);
+                for (var i = 0; i < extendedCount; i++)
+                {
+                    var extensionName = stream.ReadString(SshData.Utf8);
+                    var extensionData = stream.ReadString(SshData.Utf8);
+                    extensions.Add(extensionName, extensionData);
+                }
+            }
+
+            return new SftpFileAttributes(accessTime, modifyTime, size, userId, groupId, permissions, extensions);
+        }
+
+        internal static SftpFileAttributes FromBytes(byte[] buffer)
+        {
+            using (var stream = new SshDataStream(buffer))
+            {
+                return FromBytes(stream);
+            }
         }
     }
 }

@@ -8,7 +8,7 @@
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string NAME = "shell";
+        public const string Name = "shell";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +18,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return ShellRequestInfo.NAME; }
+            get { return Name; }
         }
 
         /// <summary>
@@ -26,7 +26,7 @@
         /// </summary>
         public ShellRequestInfo()
         {
-            this.WantReply = true;
+            WantReply = true;
         }
     }
 }

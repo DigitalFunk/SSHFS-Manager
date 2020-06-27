@@ -7,22 +7,41 @@
     internal class PasswordChangeRequiredMessage : Message
     {
         /// <summary>
-        /// Gets password change request message.
+        /// Gets password change request message as UTF-8 encoded byte array.
         /// </summary>
-        public string Message { get; private set; }
+        public byte[] Message { get; private set; }
 
         /// <summary>
-        /// Gets message language.
+        /// Gets message language as UTF-8 encoded byte array.
         /// </summary>
-        public string Language { get; private set; }
+        public byte[] Language { get; private set; }
+
+        /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // Message length
+                capacity += Message.Length; // Message
+                capacity += 4; // Language length
+                capacity += Language.Length; // Language
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Called when type specific data need to be loaded.
         /// </summary>
         protected override void LoadData()
         {
-            this.Message = this.ReadString();
-            this.Language = this.ReadString();
+            Message = ReadBinary();
+            Language = ReadBinary();
         }
 
         /// <summary>
@@ -30,8 +49,13 @@
         /// </summary>
         protected override void SaveData()
         {
-            this.Write(this.Message);
-            this.Write(this.Language);
+            WriteBinaryString(Message);
+            WriteBinaryString(Language);
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnUserAuthenticationPasswordChangeRequiredReceived(this);
         }
     }
 }

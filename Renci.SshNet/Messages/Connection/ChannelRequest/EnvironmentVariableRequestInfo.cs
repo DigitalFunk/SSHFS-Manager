@@ -5,10 +5,13 @@
     /// </summary>
     internal class EnvironmentVariableRequestInfo : RequestInfo
     {
+        private byte[] _variableName;
+        private byte[] _variableValue;
+
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string NAME = "env";
+        public const string Name = "env";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +21,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return EnvironmentVariableRequestInfo.NAME; }
+            get { return Name; }
         }
 
         /// <summary>
@@ -27,7 +30,10 @@
         /// <value>
         /// The name of the variable.
         /// </value>
-        public string VariableName { get; set; }
+        public string VariableName
+        {
+            get { return Utf8.GetString(_variableName, 0, _variableName.Length); }
+        }
 
         /// <summary>
         /// Gets or sets the variable value.
@@ -35,14 +41,36 @@
         /// <value>
         /// The variable value.
         /// </value>
-        public string VariableValue { get; set; }
+        public string VariableValue
+        {
+            get { return Utf8.GetString(_variableValue, 0, _variableValue.Length); }
+        }
+
+        /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // VariableName length
+                capacity += _variableName.Length; // VariableName
+                capacity += 4; // VariableValue length
+                capacity += _variableValue.Length; // VariableValue
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="EnvironmentVariableRequestInfo"/> class.
         /// </summary>
         public EnvironmentVariableRequestInfo()
         {
-            this.WantReply = true;
+            WantReply = true;
         }
 
         /// <summary>
@@ -53,8 +81,8 @@
         public EnvironmentVariableRequestInfo(string variableName, string variableValue)
             : this()
         {
-            this.VariableName = variableName;
-            this.VariableValue = variableValue;
+            _variableName = Utf8.GetBytes(variableName);
+            _variableValue = Utf8.GetBytes(variableValue);
         }
 
         /// <summary>
@@ -64,8 +92,8 @@
         {
             base.LoadData();
 
-            this.VariableName = this.ReadString();
-            this.VariableValue = this.ReadString();
+            _variableName = ReadBinary();
+            _variableValue = ReadBinary();
         }
 
         /// <summary>
@@ -75,8 +103,8 @@
         {
             base.SaveData();
 
-            this.Write(this.VariableName);
-            this.Write(this.VariableValue);
+            WriteBinaryString(_variableName);
+            WriteBinaryString(_variableValue);
         }
     }
 }

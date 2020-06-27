@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Renci.SshNet.Messages.Authentication;
 
 namespace Renci.SshNet.Common
 {
@@ -20,9 +16,9 @@ namespace Renci.SshNet.Common
         /// Initializes a new instance of the <see cref="AuthenticationEventArgs"/> class.
         /// </summary>
         /// <param name="username">The username.</param>
-        public AuthenticationEventArgs(string username)
+        protected AuthenticationEventArgs(string username)
         {
-            this.Username = username;
+            Username = username;
         }
     }
 }

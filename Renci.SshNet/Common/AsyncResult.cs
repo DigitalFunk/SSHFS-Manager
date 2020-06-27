@@ -11,16 +11,16 @@ namespace Renci.SshNet.Common
         // Fields set at construction which never change while operation is pending
         private readonly AsyncCallback _asyncCallback;
 
-        private readonly Object _asyncState;
+        private readonly object _asyncState;
 
         // Field set at construction which do change after operation completes
-        private const Int32 _statePending = 0;
+        private const int StatePending = 0;
 
-        private const Int32 _stateCompletedSynchronously = 1;
+        private const int StateCompletedSynchronously = 1;
 
-        private const Int32 _stateCompletedAsynchronously = 2;
+        private const int StateCompletedAsynchronously = 2;
 
-        private Int32 _completedState = _statePending;
+        private int _completedState = StatePending;
 
         // Field that may or may not get set depending on usage
         private ManualResetEvent _asyncWaitHandle;
@@ -29,10 +29,12 @@ namespace Renci.SshNet.Common
         private Exception _exception;
 
         /// <summary>
-        /// Gets or sets a value indicating whether EndInvoke has been called on the current AsyncResult.
+        /// Gets or sets a value indicating whether <see cref="EndInvoke()"/> has been called on the current
+        /// <see cref="AsyncResult"/>.
         /// </summary>
         /// <value>
-        /// 	<c>true</c> if EndInvoke has been called on the current AsyncResult; otherwise, <c>false</c>.
+        /// <c>true</c> if <see cref="EndInvoke()"/> has been called on the current <see cref="AsyncResult"/>;
+        /// otherwise, <c>false</c>.
         /// </value>
         public bool EndInvokeCalled { get; private set; }
 
@@ -41,10 +43,10 @@ namespace Renci.SshNet.Common
         /// </summary>
         /// <param name="asyncCallback">The async callback.</param>
         /// <param name="state">The state.</param>
-        public AsyncResult(AsyncCallback asyncCallback, Object state)
+        protected AsyncResult(AsyncCallback asyncCallback, object state)
         {
-            this._asyncCallback = asyncCallback;
-            this._asyncState = state;
+            _asyncCallback = asyncCallback;
+            _asyncState = state;
         }
 
         /// <summary>
@@ -52,45 +54,45 @@ namespace Renci.SshNet.Common
         /// </summary>
         /// <param name="exception">The exception.</param>
         /// <param name="completedSynchronously">if set to <c>true</c> [completed synchronously].</param>
-        public void SetAsCompleted(Exception exception, Boolean completedSynchronously)
+        public void SetAsCompleted(Exception exception, bool completedSynchronously)
         {
             // Passing null for exception means no error occurred; this is the common case
-            this._exception = exception;
+            _exception = exception;
 
             // The m_CompletedState field MUST be set prior calling the callback
-            Int32 prevState = Interlocked.Exchange(ref this._completedState,
-               completedSynchronously ? _stateCompletedSynchronously : _stateCompletedAsynchronously);
-            if (prevState != _statePending)
+            var prevState = Interlocked.Exchange(ref _completedState,
+               completedSynchronously ? StateCompletedSynchronously : StateCompletedAsynchronously);
+            if (prevState != StatePending)
                 throw new InvalidOperationException("You can set a result only once");
 
             // If the event exists, set it
-            if (this._asyncWaitHandle != null)
-                this._asyncWaitHandle.Set();
+            if (_asyncWaitHandle != null)
+                _asyncWaitHandle.Set();
 
             // If a callback method was set, call it
-            if (this._asyncCallback != null)
-                this._asyncCallback(this);
+            if (_asyncCallback != null)
+                _asyncCallback(this);
         }
 
         /// <summary>
         /// Waits until the asynchronous operation completes, and then returns. 
         /// </summary>
-        public void EndInvoke()
+        internal void EndInvoke()
         {
             // This method assumes that only 1 thread calls EndInvoke for this object
-            if (!this.IsCompleted)
+            if (!IsCompleted)
             {
                 // If the operation isn't done, wait for it
                 AsyncWaitHandle.WaitOne();
-                AsyncWaitHandle.Close();
-                this._asyncWaitHandle = null;  // Allow early GC
+                _asyncWaitHandle = null;  // Allow early GC
+                AsyncWaitHandle.Dispose();
             }
 
-            this.EndInvokeCalled = true;
+            EndInvokeCalled = true;
 
             // Operation is done: if an exception occurred, throw it
-            if (this._exception != null)
-                throw this._exception;
+            if (_exception != null)
+                throw _exception;
         }
 
         #region Implementation of IAsyncResult
@@ -99,95 +101,101 @@ namespace Renci.SshNet.Common
         /// Gets a user-defined object that qualifies or contains information about an asynchronous operation.
         /// </summary>
         /// <returns>A user-defined object that qualifies or contains information about an asynchronous operation.</returns>
-        public Object AsyncState { get { return this._asyncState; } }
+        public object AsyncState { get { return _asyncState; } }
 
         /// <summary>
         /// Gets a value that indicates whether the asynchronous operation completed synchronously.
         /// </summary>
         /// <returns>true if the asynchronous operation completed synchronously; otherwise, false.</returns>
-        public Boolean CompletedSynchronously
+        public bool CompletedSynchronously
         {
-            get { return this._completedState == _stateCompletedSynchronously; }
+            get { return _completedState == StateCompletedSynchronously; }
         }
 
         /// <summary>
-        /// Gets a <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.
+        /// Gets a <see cref="WaitHandle"/> that is used to wait for an asynchronous operation to complete.
         /// </summary>
-        /// <returns>A <see cref="T:System.Threading.WaitHandle"/> that is used to wait for an asynchronous operation to complete.</returns>
+        /// <returns>A <see cref="WaitHandle"/> that is used to wait for an asynchronous operation to complete.</returns>
         public WaitHandle AsyncWaitHandle
         {
             get
             {
-                if (this._asyncWaitHandle == null)
+                if (_asyncWaitHandle == null)
                 {
-                    Boolean done = this.IsCompleted;
-                    ManualResetEvent mre = new ManualResetEvent(done);
-                    if (Interlocked.CompareExchange(ref this._asyncWaitHandle, mre, null) != null)
+                    var done = IsCompleted;
+                    var mre = new ManualResetEvent(done);
+                    if (Interlocked.CompareExchange(ref _asyncWaitHandle, mre, null) != null)
                     {
                         // Another thread created this object's event; dispose the event we just created
-                        mre.Close();
+                        mre.Dispose();
                     }
                     else
                     {
-                        if (!done && this.IsCompleted)
+                        if (!done && IsCompleted)
                         {
                             // If the operation wasn't done when we created 
                             // the event but now it is done, set the event
-                            this._asyncWaitHandle.Set();
+                            _asyncWaitHandle.Set();
                         }
                     }
                 }
-                return this._asyncWaitHandle;
+                return _asyncWaitHandle;
             }
         }
 
         /// <summary>
         /// Gets a value that indicates whether the asynchronous operation has completed.
         /// </summary>
-        /// <returns>true if the operation is complete; otherwise, false.</returns>
-        public Boolean IsCompleted
+        /// <returns>
+        /// <c>true</c> if the operation is complete; otherwise, <c>false</c>.</returns>
+        public bool IsCompleted
         {
-            get { return this._completedState != _statePending; }
+            get { return _completedState != StatePending; }
         }
+
         #endregion
     }
 
     /// <summary>
     /// Base class to encapsulates the results of an asynchronous operation that returns result.
     /// </summary>
+    /// <typeparam name="TResult">The type of the result.</typeparam>
     public abstract class AsyncResult<TResult> : AsyncResult
     {
         // Field set when operation completes
-        private TResult _result = default(TResult);
+        private TResult _result;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="AsyncResult&lt;TResult&gt;"/> class.
+        /// Initializes a new instance of the <see cref="AsyncResult{TResult}"/> class.
         /// </summary>
         /// <param name="asyncCallback">The async callback.</param>
         /// <param name="state">The state.</param>
-        public AsyncResult(AsyncCallback asyncCallback, Object state)
+        protected AsyncResult(AsyncCallback asyncCallback, object state)
             : base(asyncCallback, state)
-        { }
+        {
+        }
 
         /// <summary>
         /// Marks asynchronous operation as completed.
         /// </summary>
         /// <param name="result">The result.</param>
         /// <param name="completedSynchronously">if set to <c>true</c> [completed synchronously].</param>
-        public void SetAsCompleted(TResult result, Boolean completedSynchronously)
+        public void SetAsCompleted(TResult result, bool completedSynchronously)
         {
             // Save the asynchronous operation's result
-            this._result = result;
+            _result = result;
 
             // Tell the base class that the operation completed successfully (no exception)
-            base.SetAsCompleted(null, completedSynchronously);
+            SetAsCompleted(null, completedSynchronously);
         }
 
         /// <summary>
         /// Waits until the asynchronous operation completes, and then returns the value generated by the asynchronous operation. 
         /// </summary>
-        /// <returns></returns>
-        new public TResult EndInvoke()
+        /// <returns>
+        /// The invocation result.
+        /// </returns>
+        public new TResult EndInvoke()
         {
             base.EndInvoke(); // Wait until operation has completed 
             return _result;  // Return the result (if above didn't throw)

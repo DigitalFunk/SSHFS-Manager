@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Renci.SshNet.Messages.Authentication
 {
@@ -35,11 +34,11 @@ namespace Renci.SshNet.Messages.Authentication
         /// </summary>
         protected override void LoadData()
         {
-            this.AllowedAuthentications = this.ReadNamesList();
-            this.PartialSuccess = this.ReadBoolean();
-            if (this.PartialSuccess)
+            AllowedAuthentications = ReadNamesList();
+            PartialSuccess = ReadBoolean();
+            if (PartialSuccess)
             {
-                this.Message = string.Join(",", this.AllowedAuthentications);
+                Message = string.Join(",", AllowedAuthentications);
             }
         }
 
@@ -49,6 +48,11 @@ namespace Renci.SshNet.Messages.Authentication
         protected override void SaveData()
         {
             throw new NotImplementedException();
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnUserAuthenticationFailureReceived(this);
         }
     }
 }

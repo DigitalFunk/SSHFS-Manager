@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Renci.SshNet.Common
 {
@@ -35,9 +32,9 @@ namespace Renci.SshNet.Common
         public AuthenticationPromptEventArgs(string username, string instruction, string language, IEnumerable<AuthenticationPrompt> prompts)
             : base(username)
         {
-            this.Instruction = instruction;
-            this.Language = language;
-            this.Prompts = prompts;
+            Instruction = instruction;
+            Language = language;
+            Prompts = prompts;
         }
     }
 }

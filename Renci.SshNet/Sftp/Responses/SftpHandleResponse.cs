@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Renci.SshNet.Sftp.Responses
+﻿namespace Renci.SshNet.Sftp.Responses
 {
     internal class SftpHandleResponse : SftpResponse
     {
@@ -12,13 +7,25 @@ namespace Renci.SshNet.Sftp.Responses
             get { return SftpMessageTypes.Handle; }
         }
 
-        public byte[] Handle { get; private set; }
+        public byte[] Handle { get; set; }
+
+        public SftpHandleResponse(uint protocolVersion)
+            : base(protocolVersion)
+        {
+        }
 
         protected override void LoadData()
         {
             base.LoadData();
             
-            this.Handle = this.ReadBinaryString();
+            Handle = ReadBinary();
+        }
+
+        protected override void SaveData()
+        {
+            base.SaveData();
+
+            WriteBinary(Handle, 0, Handle.Length);
         }
     }
 }

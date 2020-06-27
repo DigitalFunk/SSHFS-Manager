@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Collections.Generic;
 
 namespace Renci.SshNet.Sftp.Responses
 {
@@ -12,21 +9,24 @@ namespace Renci.SshNet.Sftp.Responses
             get { return SftpMessageTypes.Version; }
         }
 
-        public uint Version { get; private set; }
+        public uint Version { get; set; }
 
-        public IDictionary<string, string> Extentions { get; private set; }
+        public IDictionary<string, string> Extentions { get; set; }
 
         protected override void LoadData()
         {
             base.LoadData();
-            this.Version = this.ReadUInt32();
-            this.Extentions = this.ReadExtensionPair();
+            Version = ReadUInt32();
+            Extentions = ReadExtensionPair();
         }
 
         protected override void SaveData()
         {
-            throw new InvalidOperationException();
-        }
+            base.SaveData();
 
+            Write(Version);
+            if (Extentions != null)
+                Write(Extentions);
+        }
     }
 }

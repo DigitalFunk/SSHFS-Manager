@@ -1,19 +1,28 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography;
-using Renci.SshNet.Common;
-using Renci.SshNet.Messages;
-using Renci.SshNet.Messages.Transport;
-using System.Globalization;
+﻿using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Security
 {
     /// <summary>
     /// Represents "diffie-hellman-group1-sha1" algorithm implementation.
     /// </summary>
-    internal class KeyExchangeDiffieHellmanGroup1Sha1 : KeyExchangeDiffieHellman
+    internal class KeyExchangeDiffieHellmanGroup1Sha1 : KeyExchangeDiffieHellmanGroupSha1
     {
+        private static readonly byte[] SecondOkleyGroupReversed =
+            {
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x81, 0x53, 0xe6, 0xec,
+                0x51, 0x66, 0x28, 0x49, 0xe6, 0x1f, 0x4b, 0x7c, 0x11, 0x24, 0x9f, 0xae,
+                0xa5, 0x9f, 0x89, 0x5a, 0xfb, 0x6b, 0x38, 0xee, 0xed, 0xb7, 0x06, 0xf4,
+                0xb6, 0x5c, 0xff, 0x0b, 0x6b, 0xed, 0x37, 0xa6, 0xe9, 0x42, 0x4c, 0xf4,
+                0xc6, 0x7e, 0x5e, 0x62, 0x76, 0xb5, 0x85, 0xe4, 0x45, 0xc2, 0x51, 0x6d,
+                0x6d, 0x35, 0xe1, 0x4f, 0x37, 0x14, 0x5f, 0xf2, 0x6d, 0x0a, 0x2b, 0x30,
+                0x1b, 0x43, 0x3a, 0xcd, 0xb3, 0x19, 0x95, 0xef, 0xdd, 0x04, 0x34, 0x8e,
+                0x79, 0x08, 0x4a, 0x51, 0x22, 0x9b, 0x13, 0x3b, 0xa6, 0xbe, 0x0b, 0x02,
+                0x74, 0xcc, 0x67, 0x8a, 0x08, 0x4e, 0x02, 0x29, 0xd1, 0x1c, 0xdc, 0x80,
+                0x8b, 0x62, 0xc6, 0xc4, 0x34, 0xc2, 0x68, 0x21, 0xa2, 0xda, 0x0f, 0xc9,
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+                0x00
+            };
+
         /// <summary>
         /// Gets algorithm name.
         /// </summary>
@@ -23,113 +32,16 @@ namespace Renci.SshNet.Security
         }
 
         /// <summary>
-        /// Calculates key exchange hash value.
+        /// Gets the group prime.
         /// </summary>
-        /// <returns>
-        /// Key exchange hash.
-        /// </returns>
-        protected override byte[] CalculateHash()
+        /// <value>
+        /// The group prime.
+        /// </value>
+        public override BigInteger GroupPrime
         {
-            var hashData = new _ExchangeHashData
+            get
             {
-                ClientVersion = this.Session.ClientVersion,
-                ServerVersion = this.Session.ServerVersion,
-                ClientPayload = this._clientPayload,
-                ServerPayload = this._serverPayload,
-                HostKey = this._hostKey,
-                ClientExchangeValue = this._clientExchangeValue,
-                ServerExchangeValue = this._serverExchangeValue,
-                SharedKey = this.SharedKey,
-            }.GetBytes();
-
-            return this.Hash(hashData);
-        }
-
-        /// <summary>
-        /// Starts key exchange algorithm
-        /// </summary>
-        /// <param name="session">The session.</param>
-        /// <param name="message">Key exchange init message.</param>
-        public override void Start(Session session, KeyExchangeInitMessage message)
-        {
-            base.Start(session, message);
-
-            this.Session.RegisterMessage("SSH_MSG_KEXDH_REPLY");
-
-            this.Session.MessageReceived += Session_MessageReceived;
-
-            BigInteger prime;
-            var secondOkleyGroup = @"00FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381FFFFFFFFFFFFFFFF";
-            BigInteger.TryParse(secondOkleyGroup, System.Globalization.NumberStyles.AllowHexSpecifier, CultureInfo.CurrentCulture, out prime);
-
-            this._prime = prime;
-
-            this._group = new BigInteger(new byte[] { 2 });
-
-            this.PopulateClientExchangeValue();
-
-            this.Session.SendMessage(new KeyExchangeDhInitMessage(this._clientExchangeValue));
-
-        }
-
-        /// <summary>
-        /// Finishes key exchange algorithm.
-        /// </summary>
-        public override void Finish()
-        {
-            base.Finish();
-
-            this.Session.MessageReceived -= Session_MessageReceived;
-        }
-
-        private void Session_MessageReceived(object sender, MessageEventArgs<Message> e)
-        {
-            var message = e.Message as KeyExchangeDhReplyMessage;
-            if (message != null)
-            {
-                //  Unregister message once received
-                this.Session.UnRegisterMessage("SSH_MSG_KEXDH_REPLY");
-
-                this.HandleServerDhReply(message.HostKey, message.F, message.Signature);
-
-                //  When SSH_MSG_KEXDH_REPLY received key exchange is completed
-                this.Finish();
-            }
-        }
-
-        private class _ExchangeHashData : SshData
-        {
-            public string ServerVersion { get; set; }
-
-            public string ClientVersion { get; set; }
-
-            public byte[] ClientPayload { get; set; }
-
-            public byte[] ServerPayload { get; set; }
-
-            public byte[] HostKey { get; set; }
-
-            public BigInteger ClientExchangeValue { get; set; }
-
-            public BigInteger ServerExchangeValue { get; set; }
-
-            public BigInteger SharedKey { get; set; }
-
-            protected override void LoadData()
-            {
-                throw new System.NotImplementedException();
-            }
-
-            protected override void SaveData()
-            {
-                this.Write(this.ClientVersion);
-                this.Write(this.ServerVersion);
-                this.WriteBinaryString(this.ClientPayload);
-                this.WriteBinaryString(this.ServerPayload);
-                this.WriteBinaryString(this.HostKey);
-                this.Write(this.ClientExchangeValue);
-                this.Write(this.ServerExchangeValue);
-                this.Write(this.SharedKey);
+                return new BigInteger(SecondOkleyGroupReversed);
             }
         }
     }

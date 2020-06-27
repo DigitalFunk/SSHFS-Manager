@@ -1,23 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Renci.SshNet.Messages.Transport
+﻿namespace Renci.SshNet.Messages.Transport
 {
     /// <summary>
     /// Represents SSH_MSG_KEX_DH_GEX_REQUEST message.
     /// </summary>
-    [Message("SSH_MSG_KEX_DH_GEX_REQUEST", 34)]
-    internal class KeyExchangeDhGroupExchangeRequest : Message,IKeyExchangedAllowed
+    [Message("SSH_MSG_KEX_DH_GEX_REQUEST", MessageNumber)]
+    internal class KeyExchangeDhGroupExchangeRequest : Message, IKeyExchangedAllowed
     {
+        internal const byte MessageNumber = 34;
+
         /// <summary>
         /// Gets or sets the minimal size in bits of an acceptable group.
         /// </summary>
         /// <value>
         /// The minimum.
         /// </value>
-        public UInt32 Minimum { get; private set; }
+        public uint Minimum { get; private set; }
 
         /// <summary>
         /// Gets or sets the preferred size in bits of the group the server will send.
@@ -25,7 +22,7 @@ namespace Renci.SshNet.Messages.Transport
         /// <value>
         /// The preferred.
         /// </value>
-        public UInt32 Preferred { get; private set; }
+        public uint Preferred { get; private set; }
 
         /// <summary>
         /// Gets or sets the maximal size in bits of an acceptable group.
@@ -33,7 +30,25 @@ namespace Renci.SshNet.Messages.Transport
         /// <value>
         /// The maximum.
         /// </value>
-        public UInt32 Maximum { get; private set; }
+        public uint Maximum { get; private set; }
+
+        /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // Minimum
+                capacity += 4; // Preferred
+                capacity += 4; // Maximum
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyExchangeDhGroupExchangeRequest"/> class.
@@ -43,9 +58,9 @@ namespace Renci.SshNet.Messages.Transport
         /// <param name="maximum">The maximum.</param>
         public KeyExchangeDhGroupExchangeRequest(uint minimum, uint preferred, uint maximum)
         {
-            this.Minimum = minimum;
-            this.Preferred = preferred;
-            this.Maximum = maximum;
+            Minimum = minimum;
+            Preferred = preferred;
+            Maximum = maximum;
         }
 
         /// <summary>
@@ -53,9 +68,9 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void LoadData()
         {
-            this.Minimum = this.ReadUInt32();
-            this.Preferred = this.ReadUInt32();
-            this.Maximum = this.ReadUInt32();
+            Minimum = ReadUInt32();
+            Preferred = ReadUInt32();
+            Maximum = ReadUInt32();
         }
 
         /// <summary>
@@ -63,9 +78,14 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void SaveData()
         {
-            this.Write(this.Minimum);
-            this.Write(this.Preferred);
-            this.Write(this.Maximum);
+            Write(Minimum);
+            Write(Preferred);
+            Write(Maximum);
+        }
+
+        internal override void Process(Session session)
+        {
+            throw new System.NotImplementedException();
         }
     }
 }

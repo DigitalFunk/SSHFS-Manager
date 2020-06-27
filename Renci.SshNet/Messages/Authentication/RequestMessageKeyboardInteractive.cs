@@ -1,4 +1,4 @@
-﻿using System.Text;
+﻿using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Messages.Authentication
 {
@@ -8,28 +8,33 @@ namespace Renci.SshNet.Messages.Authentication
     internal class RequestMessageKeyboardInteractive : RequestMessage
     {
         /// <summary>
-        /// Gets the name of the authentication method.
-        /// </summary>
-        /// <value>
-        /// The name of the method.
-        /// </value>
-        public override string MethodName
-        {
-            get
-            {
-                return "keyboard-interactive";
-            }
-        }
-
-        /// <summary>
         /// Gets message language.
         /// </summary>
-        public string Language { get; private set; }
+        public byte[] Language { get; private set; }
 
         /// <summary>
         /// Gets authentication sub methods.
         /// </summary>
-        public string SubMethods { get; private set; }
+        public byte[] SubMethods { get; private set; }
+
+        /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // Language length
+                capacity += Language.Length; // Language
+                capacity += 4; // SubMethods length
+                capacity += SubMethods.Length; // SubMethods
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestMessageKeyboardInteractive"/> class.
@@ -37,10 +42,10 @@ namespace Renci.SshNet.Messages.Authentication
         /// <param name="serviceName">Name of the service.</param>
         /// <param name="username">Authentication username.</param>
         public RequestMessageKeyboardInteractive(ServiceName serviceName, string username)
-            : base(serviceName, username)
+            : base(serviceName, username, "keyboard-interactive")
         {
-            this.Language = string.Empty;
-            this.SubMethods = string.Empty;
+            Language = Array<byte>.Empty;
+            SubMethods = Array<byte>.Empty;
         }
 
         /// <summary>
@@ -50,9 +55,8 @@ namespace Renci.SshNet.Messages.Authentication
         {
             base.SaveData();
 
-            this.Write(this.Language);
-
-            this.Write(this.SubMethods, Encoding.UTF8);
+            WriteBinaryString(Language);
+            WriteBinaryString(SubMethods);
         }
     }
 }

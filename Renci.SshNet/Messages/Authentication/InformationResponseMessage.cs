@@ -15,11 +15,23 @@ namespace Renci.SshNet.Messages.Authentication
         public IList<string> Responses { get; private set; }
 
         /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// <c>-1</c> to indicate that the size of the message cannot be determined,
+        /// or is too costly to calculate.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get { return -1; }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="InformationResponseMessage"/> class.
         /// </summary>
         public InformationResponseMessage()
         {
-            this.Responses = new List<string>();
+            Responses = new List<string>();
         }
 
         /// <summary>
@@ -35,11 +47,16 @@ namespace Renci.SshNet.Messages.Authentication
         /// </summary>
         protected override void SaveData()
         {
-            this.Write((UInt32)this.Responses.Count);
-            foreach (var response in this.Responses)
+            Write((uint) Responses.Count);
+            foreach (var response in Responses)
             {
-                this.Write(response);
+                Write(response);
             }
+        }
+
+        internal override void Process(Session session)
+        {
+            throw new NotImplementedException();
         }
     }
 }

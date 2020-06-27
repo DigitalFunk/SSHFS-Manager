@@ -1,10 +1,15 @@
-﻿namespace Renci.SshNet.Messages.Connection
+﻿using System;
+
+namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Used to open "direct-tcpip" channel type
     /// </summary>
     internal class DirectTcpipChannelInfo : ChannelOpenInfo
     {
+        private byte[] _hostToConnect;
+        private byte[] _originatorAddress;
+
         /// <summary>
         /// Specifies channel open type
         /// </summary>
@@ -18,13 +23,17 @@
         /// </value>
         public override string ChannelType
         {
-            get { return DirectTcpipChannelInfo.NAME; }
+            get { return NAME; }
         }
 
         /// <summary>
         /// Gets the host to connect.
         /// </summary>
-        public string HostToConnect { get; private set; }
+        public string HostToConnect
+        {
+            get { return Utf8.GetString(_hostToConnect, 0, _hostToConnect.Length); }
+            private set { _hostToConnect = Utf8.GetBytes(value); }
+        }
 
         /// <summary>
         /// Gets the port to connect.
@@ -34,7 +43,11 @@
         /// <summary>
         /// Gets the originator address.
         /// </summary>
-        public string OriginatorAddress { get; private set; }
+        public string OriginatorAddress
+        {
+            get { return Utf8.GetString(_originatorAddress, 0, _originatorAddress.Length); }
+            private set { _originatorAddress = Utf8.GetBytes(value); }
+        }
 
         /// <summary>
         /// Gets the originator port.
@@ -42,11 +55,34 @@
         public uint OriginatorPort { get; private set; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="DirectTcpipChannelInfo"/> class.
+        /// Gets the size of the message in bytes.
         /// </summary>
-        public DirectTcpipChannelInfo()
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
         {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // HostToConnect length
+                capacity += _hostToConnect.Length; // HostToConnect
+                capacity += 4; // PortToConnect
+                capacity += 4; // OriginatorAddress length
+                capacity += _originatorAddress.Length; // OriginatorAddress
+                capacity += 4; // OriginatorPort
+                return capacity;
+            }
+        }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="DirectTcpipChannelInfo"/> class from the
+        /// specified data.
+        /// </summary>
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
+        public DirectTcpipChannelInfo(byte[] data)
+        {
+            Load(data);
         }
 
         /// <summary>
@@ -58,10 +94,10 @@
         /// <param name="originatorPort">The originator port.</param>
         public DirectTcpipChannelInfo(string hostToConnect, uint portToConnect, string originatorAddress, uint originatorPort)
         {
-            this.HostToConnect = hostToConnect;
-            this.PortToConnect = portToConnect;
-            this.OriginatorAddress = originatorAddress;
-            this.OriginatorPort = originatorPort;
+            HostToConnect = hostToConnect;
+            PortToConnect = portToConnect;
+            OriginatorAddress = originatorAddress;
+            OriginatorPort = originatorPort;
         }
 
         /// <summary>
@@ -71,10 +107,10 @@
         {
             base.LoadData();
 
-            this.HostToConnect = this.ReadString();
-            this.PortToConnect = this.ReadUInt32();
-            this.OriginatorAddress = this.ReadString();
-            this.OriginatorPort = this.ReadUInt32();
+            _hostToConnect = ReadBinary();
+            PortToConnect = ReadUInt32();
+            _originatorAddress = ReadBinary();
+            OriginatorPort = ReadUInt32();
         }
 
         /// <summary>
@@ -84,10 +120,10 @@
         {
             base.SaveData();
 
-            this.Write(this.HostToConnect);
-            this.Write(this.PortToConnect);
-            this.Write(this.OriginatorAddress);
-            this.Write(this.OriginatorPort);
+            WriteBinaryString(_hostToConnect);
+            Write(PortToConnect);
+            WriteBinaryString(_originatorAddress);
+            Write(OriginatorPort);
         }
     }
 }

@@ -6,7 +6,7 @@ namespace Renci.SshNet
     /// <summary>
     /// Base class for port forwarding functionality.
     /// </summary>
-    public abstract class ForwardedPort
+    public abstract class ForwardedPort : IForwardedPort
     {
         /// <summary>
         /// Gets or sets the session.
@@ -14,70 +14,56 @@ namespace Renci.SshNet
         /// <value>
         /// The session.
         /// </value>
-        internal Session Session { get; set; }
+        internal ISession Session { get; set; }
 
         /// <summary>
-        /// Gets the bound host.
+        /// The <see cref="Closing"/> event occurs as the forwarded port is being stopped.
         /// </summary>
-        public string BoundHost { get; internal set; }
+        internal event EventHandler Closing;
 
         /// <summary>
-        /// Gets the bound port.
+        /// The <see cref="IForwardedPort.Closing"/> event occurs as the forwarded port is being stopped.
         /// </summary>
-        public uint BoundPort { get; internal set; }
+        event EventHandler IForwardedPort.Closing
+        {
+            add { Closing += value; }
+            remove { Closing -= value; }
+        }
 
         /// <summary>
-        /// Gets the forwarded host.
-        /// </summary>
-        public string Host { get; internal set; }
-
-        /// <summary>
-        /// Gets the forwarded port.
-        /// </summary>
-        public uint Port { get; internal set; }
-
-        /// <summary>
-        /// Gets or sets a value indicating whether port forwarding started.
+        /// Gets a value indicating whether port forwarding is started.
         /// </summary>
         /// <value>
-        /// 	<c>true</c> if port forwarding started; otherwise, <c>false</c>.
+        /// <c>true</c> if port forwarding is started; otherwise, <c>false</c>.
         /// </value>
-        public bool IsStarted { get; protected set; }
+        public abstract bool IsStarted { get; }
 
         /// <summary>
-        /// Occurs when exception is thrown.
+        /// Occurs when an exception is thrown.
         /// </summary>
         public event EventHandler<ExceptionEventArgs> Exception;
 
         /// <summary>
-        /// Occurs when port forwarding request received.
+        /// Occurs when a port forwarding request is received.
         /// </summary>
         public event EventHandler<PortForwardEventArgs> RequestReceived;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Port"/> class.
-        /// </summary>
-        internal ForwardedPort()
-        {
-
-        }
 
         /// <summary>
         /// Starts port forwarding.
         /// </summary>
         public virtual void Start()
         {
-            if (this.Session == null)
-            {
-                throw new InvalidOperationException("Session property is null.");
-            }
+            CheckDisposed();
 
-            if (!this.Session.IsConnected)
-            {
-                throw new SshConnectionException("Not connected.");
-            }
+            if (IsStarted)
+                throw new InvalidOperationException("Forwarded port is already started.");
+            if (Session == null)
+                throw new InvalidOperationException("Forwarded port is not added to a client.");
+            if (!Session.IsConnected)
+                throw new SshConnectionException("Client not connected.");
 
-            this.Session.ErrorOccured += Session_ErrorOccured;
+            Session.ErrorOccured += Session_ErrorOccured;
+            StartPort();
         }
 
         /// <summary>
@@ -85,18 +71,66 @@ namespace Renci.SshNet
         /// </summary>
         public virtual void Stop()
         {
-            this.Session.ErrorOccured -= Session_ErrorOccured;
+            if (IsStarted)
+            {
+                StopPort(Session.ConnectionInfo.Timeout);
+            }
         }
+
+        /// <summary>
+        /// Starts port forwarding.
+        /// </summary>
+        protected abstract void StartPort();
+
+        /// <summary>
+        /// Stops port forwarding, and waits for the specified timeout until all pending
+        /// requests are processed.
+        /// </summary>
+        /// <param name="timeout">The maximum amount of time to wait for pending requests to finish processing.</param>
+        protected virtual void StopPort(TimeSpan timeout)
+        {
+            RaiseClosing();
+
+            var session = Session;
+            if (session != null)
+            {
+                session.ErrorOccured -= Session_ErrorOccured;
+            }
+        }
+
+        /// <summary>
+        /// Releases unmanaged and - optionally - managed resources
+        /// </summary>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                var session = Session;
+                if (session != null)
+                {
+                    StopPort(session.ConnectionInfo.Timeout);
+                    Session = null;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Ensures the current instance is not disposed.
+        /// </summary>
+        /// <exception cref="ObjectDisposedException">The current instance is disposed.</exception>
+        protected abstract void CheckDisposed();
 
         /// <summary>
         /// Raises <see cref="Renci.SshNet.ForwardedPort.Exception"/> event.
         /// </summary>
-        /// <param name="execption">The exception.</param>
-        protected void RaiseExceptionEvent(Exception execption)
+        /// <param name="exception">The exception.</param>
+        protected void RaiseExceptionEvent(Exception exception)
         {
-            if (this.Exception != null)
+            var handlers = Exception;
+            if (handlers != null)
             {
-                this.Exception(this, new ExceptionEventArgs(execption));
+                handlers(this, new ExceptionEventArgs(exception));
             }
         }
 
@@ -107,9 +141,22 @@ namespace Renci.SshNet
         /// <param name="port">Request originator port.</param>
         protected void RaiseRequestReceived(string host, uint port)
         {
-            if (this.RequestReceived != null)
+            var handlers = RequestReceived;
+            if (handlers != null)
             {
-                this.RequestReceived(this, new PortForwardEventArgs(host, port));
+                handlers(this, new PortForwardEventArgs(host, port));
+            }
+        }
+
+        /// <summary>
+        /// Raises the <see cref="IForwardedPort.Closing"/> event.
+        /// </summary>
+        private void RaiseClosing()
+        {
+            var handlers = Closing;
+            if (handlers != null)
+            {
+                handlers(this, EventArgs.Empty);
             }
         }
 
@@ -120,7 +167,7 @@ namespace Renci.SshNet
         /// <param name="e">The <see cref="ExceptionEventArgs"/> instance containing the event data.</param>
         private void Session_ErrorOccured(object sender, ExceptionEventArgs e)
         {
-            this.RaiseExceptionEvent(e.Exception);
+            RaiseExceptionEvent(e.Exception);
         }
     }
 }

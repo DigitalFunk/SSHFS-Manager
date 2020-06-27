@@ -61,8 +61,8 @@
             this.removeButton = new System.Windows.Forms.Button();
             this.addButton = new System.Windows.Forms.Button();
             this.buttonPanel = new System.Windows.Forms.TableLayoutPanel();
-            this.muButton = new System.Windows.Forms.Button();
             this.saveButton = new System.Windows.Forms.Button();
+            this.muButton = new System.Windows.Forms.Button();
             this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
             this.notifyIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.contextMenu = new System.Windows.Forms.ContextMenuStrip(this.components);
@@ -87,8 +87,8 @@
             // tableLayoutPanel1
             // 
             this.tableLayoutPanel1.ColumnCount = 2;
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 42.88703F));
-            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 57.11297F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 35F));
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 65F));
             this.tableLayoutPanel1.Controls.Add(this.fieldsPanel, 1, 0);
             this.tableLayoutPanel1.Controls.Add(this.driveListView, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.tableLayoutPanel2, 0, 1);
@@ -98,17 +98,16 @@
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.Padding = new System.Windows.Forms.Padding(0, 2, 0, 0);
             this.tableLayoutPanel1.RowCount = 2;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 85.99348F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 85.99349F));
             this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 14.00651F));
-            this.tableLayoutPanel1.Size = new System.Drawing.Size(528, 328);
+            this.tableLayoutPanel1.Size = new System.Drawing.Size(528, 353);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
             // fieldsPanel
             // 
-            this.fieldsPanel.ColumnCount = 3;
-            this.fieldsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 30.60498F));
-            this.fieldsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 69.39502F));
-            this.fieldsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 16F));
+            this.fieldsPanel.ColumnCount = 2;
+            this.fieldsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.fieldsPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 66.66666F));
             this.fieldsPanel.Controls.Add(this.nameBox, 1, 0);
             this.fieldsPanel.Controls.Add(this.label1, 0, 0);
             this.fieldsPanel.Controls.Add(this.hostBox, 1, 1);
@@ -126,65 +125,78 @@
             this.fieldsPanel.Controls.Add(this.panel2, 1, 5);
             this.fieldsPanel.Controls.Add(this.authLabel, 0, 5);
             this.fieldsPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.fieldsPanel.Location = new System.Drawing.Point(229, 5);
+            this.fieldsPanel.Location = new System.Drawing.Point(187, 5);
             this.fieldsPanel.Name = "fieldsPanel";
             this.fieldsPanel.RowCount = 12;
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 29F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 31F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 32F));
             this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 30F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 28F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 31F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 31F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 68F));
             this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 29F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 29F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 63F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 27F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 29F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 54F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 20F));
-            this.fieldsPanel.Size = new System.Drawing.Size(296, 274);
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 31F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 58F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
+            this.fieldsPanel.Size = new System.Drawing.Size(338, 295);
             this.fieldsPanel.TabIndex = 3;
+            this.fieldsPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.fieldsPanel_Paint);
             // 
             // nameBox
             // 
-            this.nameBox.Location = new System.Drawing.Point(88, 3);
+            this.nameBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.nameBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.nameBox.Location = new System.Drawing.Point(115, 5);
             this.nameBox.Name = "nameBox";
-            this.nameBox.Size = new System.Drawing.Size(188, 20);
+            this.nameBox.Size = new System.Drawing.Size(220, 20);
             this.nameBox.TabIndex = 0;
-            this.nameBox.Leave += new System.EventHandler(this.box_Leave);
+            this.nameBox.Leave += new System.EventHandler(this.Box_Leave);
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Dock = System.Windows.Forms.DockStyle.Left;
+            this.label1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label1.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label1.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
             this.label1.Location = new System.Drawing.Point(3, 0);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(66, 29);
+            this.label1.Size = new System.Drawing.Size(106, 31);
             this.label1.TabIndex = 1;
             this.label1.Text = "Drive Name:";
-            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label1.Click += new System.EventHandler(this.label1_Click);
             // 
             // hostBox
             // 
-            this.hostBox.Location = new System.Drawing.Point(88, 32);
+            this.hostBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.hostBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.hostBox.Location = new System.Drawing.Point(115, 37);
             this.hostBox.Name = "hostBox";
-            this.hostBox.Size = new System.Drawing.Size(188, 20);
+            this.hostBox.Size = new System.Drawing.Size(220, 20);
             this.hostBox.TabIndex = 1;
-            this.hostBox.Leave += new System.EventHandler(this.box_Leave);
+            this.hostBox.Leave += new System.EventHandler(this.Box_Leave);
             // 
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label2.Location = new System.Drawing.Point(3, 29);
+            this.label2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label2.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label2.Location = new System.Drawing.Point(3, 31);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(32, 30);
+            this.label2.Size = new System.Drawing.Size(106, 32);
             this.label2.TabIndex = 3;
             this.label2.Text = "Host:";
-            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label2.Click += new System.EventHandler(this.label2_Click);
             // 
             // portBox
             // 
-            this.portBox.Location = new System.Drawing.Point(88, 62);
+            this.portBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.portBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.portBox.Location = new System.Drawing.Point(115, 68);
             this.portBox.Name = "portBox";
             this.portBox.Size = new System.Drawing.Size(68, 20);
             this.portBox.TabIndex = 2;
@@ -192,120 +204,141 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label3.Location = new System.Drawing.Point(3, 59);
+            this.label3.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label3.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label3.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label3.Location = new System.Drawing.Point(3, 63);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(29, 28);
+            this.label3.Size = new System.Drawing.Size(106, 30);
             this.label3.TabIndex = 5;
             this.label3.Text = "Port:";
-            this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label3.Click += new System.EventHandler(this.label3_Click);
             // 
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label4.Location = new System.Drawing.Point(3, 87);
+            this.label4.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label4.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label4.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label4.Location = new System.Drawing.Point(3, 93);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(58, 29);
+            this.label4.Size = new System.Drawing.Size(106, 31);
             this.label4.TabIndex = 6;
             this.label4.Text = "Username:";
-            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label4.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label4.Click += new System.EventHandler(this.label4_Click);
             // 
             // userBox
             // 
-            this.userBox.Location = new System.Drawing.Point(88, 90);
+            this.userBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.userBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.userBox.Location = new System.Drawing.Point(115, 98);
             this.userBox.Name = "userBox";
-            this.userBox.Size = new System.Drawing.Size(188, 20);
+            this.userBox.Size = new System.Drawing.Size(220, 20);
             this.userBox.TabIndex = 3;
-            this.userBox.Leave += new System.EventHandler(this.box_Leave);
+            this.userBox.Leave += new System.EventHandler(this.Box_Leave);
             // 
             // authCombo
             // 
+            this.authCombo.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.authCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.authCombo.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.authCombo.FormattingEnabled = true;
             this.authCombo.Items.AddRange(new object[] {
             "Password",
             "PrivateKey"});
-            this.authCombo.Location = new System.Drawing.Point(88, 119);
+            this.authCombo.Location = new System.Drawing.Point(115, 128);
             this.authCombo.Name = "authCombo";
-            this.authCombo.Size = new System.Drawing.Size(121, 21);
+            this.authCombo.Size = new System.Drawing.Size(220, 22);
             this.authCombo.TabIndex = 4;
             this.authCombo.SelectedIndexChanged += new System.EventHandler(this.authBox_SelectedIndexChanged);
             // 
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label5.Location = new System.Drawing.Point(3, 116);
+            this.label5.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label5.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label5.ImageAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label5.Location = new System.Drawing.Point(3, 124);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(78, 29);
+            this.label5.Size = new System.Drawing.Size(106, 31);
             this.label5.TabIndex = 9;
-            this.label5.Text = "Authentication method:";
-            this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label5.Text = "Auth method:";
+            this.label5.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label5.Click += new System.EventHandler(this.label5_Click);
             // 
             // label6
             // 
             this.label6.AutoSize = true;
-            this.label6.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label6.Location = new System.Drawing.Point(3, 235);
+            this.label6.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label6.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label6.Location = new System.Drawing.Point(3, 252);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(65, 29);
+            this.label6.Size = new System.Drawing.Size(106, 31);
             this.label6.TabIndex = 11;
             this.label6.Text = "Drive Letter:";
-            this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label6.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label6.Click += new System.EventHandler(this.label6_Click);
             // 
             // panel1
             // 
             this.panel1.Controls.Add(this.letterBox);
             this.panel1.Controls.Add(this.mountCheck);
-            this.panel1.Location = new System.Drawing.Point(88, 238);
+            this.panel1.Location = new System.Drawing.Point(115, 255);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(182, 23);
+            this.panel1.Size = new System.Drawing.Size(182, 25);
             this.panel1.TabIndex = 12;
             // 
             // letterBox
             // 
-            this.letterBox.Dock = System.Windows.Forms.DockStyle.Left;
+            this.letterBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
             this.letterBox.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.letterBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.letterBox.FormattingEnabled = true;
             this.letterBox.Location = new System.Drawing.Point(0, 0);
             this.letterBox.Name = "letterBox";
-            this.letterBox.Size = new System.Drawing.Size(43, 21);
+            this.letterBox.Size = new System.Drawing.Size(85, 22);
             this.letterBox.Sorted = true;
             this.letterBox.TabIndex = 9;
             // 
             // mountCheck
             // 
             this.mountCheck.AutoSize = true;
-            this.mountCheck.Dock = System.Windows.Forms.DockStyle.Right;
-            this.mountCheck.Location = new System.Drawing.Point(89, 0);
+            this.mountCheck.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.mountCheck.Location = new System.Drawing.Point(100, 0);
             this.mountCheck.Name = "mountCheck";
-            this.mountCheck.Size = new System.Drawing.Size(93, 23);
+            this.mountCheck.Size = new System.Drawing.Size(82, 18);
             this.mountCheck.TabIndex = 10;
-            this.mountCheck.Text = "Mount at login";
+            this.mountCheck.Text = "Auto-Mount";
             this.mountCheck.UseVisualStyleBackColor = true;
+            this.mountCheck.CheckedChanged += new System.EventHandler(this.MountCheck_CheckedChanged);
             // 
             // directoryBox
             // 
+            this.directoryBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.directoryBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.directoryBox.FormattingEnabled = true;
             this.directoryBox.Items.AddRange(new object[] {
             ".",
             "/"});
-            this.directoryBox.Location = new System.Drawing.Point(88, 211);
+            this.directoryBox.Location = new System.Drawing.Point(115, 226);
             this.directoryBox.Name = "directoryBox";
-            this.directoryBox.Size = new System.Drawing.Size(188, 21);
+            this.directoryBox.Size = new System.Drawing.Size(220, 22);
             this.directoryBox.TabIndex = 8;
             // 
             // label7
             // 
             this.label7.AutoSize = true;
-            this.label7.Dock = System.Windows.Forms.DockStyle.Left;
-            this.label7.Location = new System.Drawing.Point(3, 208);
+            this.label7.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label7.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label7.Location = new System.Drawing.Point(3, 223);
             this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(52, 27);
+            this.label7.Size = new System.Drawing.Size(106, 29);
             this.label7.TabIndex = 14;
             this.label7.Text = "Directory:";
-            this.label7.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
+            this.label7.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            this.label7.Click += new System.EventHandler(this.label7_Click);
             // 
             // panel2
             // 
@@ -313,34 +346,38 @@
             this.panel2.Controls.Add(this.privateKeyBox);
             this.panel2.Controls.Add(this.privateKeyButton);
             this.panel2.Controls.Add(this.passwordBox);
-            this.panel2.Location = new System.Drawing.Point(88, 148);
+            this.panel2.Location = new System.Drawing.Point(115, 158);
             this.panel2.Name = "panel2";
-            this.panel2.Size = new System.Drawing.Size(188, 57);
+            this.panel2.Size = new System.Drawing.Size(220, 61);
             this.panel2.TabIndex = 15;
             // 
             // passphraseBox
             // 
-            this.passphraseBox.Location = new System.Drawing.Point(0, 26);
+            this.passphraseBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.passphraseBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.passphraseBox.Location = new System.Drawing.Point(0, 28);
             this.passphraseBox.Name = "passphraseBox";
             this.passphraseBox.PasswordChar = '*';
-            this.passphraseBox.Size = new System.Drawing.Size(160, 20);
+            this.passphraseBox.Size = new System.Drawing.Size(174, 20);
             this.passphraseBox.TabIndex = 6;
-            this.passphraseBox.Leave += new System.EventHandler(this.box_Leave);
+            this.passphraseBox.Leave += new System.EventHandler(this.Box_Leave);
             // 
             // privateKeyBox
             // 
+            this.privateKeyBox.Anchor = System.Windows.Forms.AnchorStyles.Left;
+            this.privateKeyBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.privateKeyBox.Location = new System.Drawing.Point(0, 0);
             this.privateKeyBox.Name = "privateKeyBox";
-            this.privateKeyBox.Size = new System.Drawing.Size(160, 20);
+            this.privateKeyBox.Size = new System.Drawing.Size(174, 20);
             this.privateKeyBox.TabIndex = 5;
-            this.privateKeyBox.Leave += new System.EventHandler(this.box_Leave);
+            this.privateKeyBox.Leave += new System.EventHandler(this.Box_Leave);
             // 
             // privateKeyButton
             // 
             this.privateKeyButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.privateKeyButton.Location = new System.Drawing.Point(162, -1);
+            this.privateKeyButton.Location = new System.Drawing.Point(180, 0);
             this.privateKeyButton.Name = "privateKeyButton";
-            this.privateKeyButton.Size = new System.Drawing.Size(28, 21);
+            this.privateKeyButton.Size = new System.Drawing.Size(40, 23);
             this.privateKeyButton.TabIndex = 2;
             this.privateKeyButton.Text = "...";
             this.privateKeyButton.UseVisualStyleBackColor = true;
@@ -351,19 +388,22 @@
             this.passwordBox.Location = new System.Drawing.Point(0, 0);
             this.passwordBox.Name = "passwordBox";
             this.passwordBox.PasswordChar = '*';
-            this.passwordBox.Size = new System.Drawing.Size(189, 20);
+            this.passwordBox.Size = new System.Drawing.Size(174, 20);
             this.passwordBox.TabIndex = 7;
             // 
             // authLabel
             // 
+            this.authLabel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.authLabel.AutoSize = true;
-            this.authLabel.Dock = System.Windows.Forms.DockStyle.Left;
-            this.authLabel.Location = new System.Drawing.Point(3, 145);
+            this.authLabel.Font = new System.Drawing.Font("Arial", 9F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.authLabel.Location = new System.Drawing.Point(60, 155);
             this.authLabel.Name = "authLabel";
-            this.authLabel.Padding = new System.Windows.Forms.Padding(0, 9, 0, 0);
-            this.authLabel.Size = new System.Drawing.Size(43, 63);
+            this.authLabel.Padding = new System.Windows.Forms.Padding(0, 10, 0, 0);
+            this.authLabel.Size = new System.Drawing.Size(49, 25);
             this.authLabel.TabIndex = 16;
             this.authLabel.Text = "______";
+            this.authLabel.TextAlign = System.Drawing.ContentAlignment.TopRight;
+            this.authLabel.Click += new System.EventHandler(this.AuthLabel_Click);
             // 
             // driveListView
             // 
@@ -377,7 +417,7 @@
             this.driveListView.Location = new System.Drawing.Point(3, 5);
             this.driveListView.MultiSelect = false;
             this.driveListView.Name = "driveListView";
-            this.driveListView.Size = new System.Drawing.Size(220, 274);
+            this.driveListView.Size = new System.Drawing.Size(178, 295);
             this.driveListView.SmallImageList = this.imageList;
             this.driveListView.TabIndex = 0;
             this.driveListView.UseCompatibleStateImageBehavior = false;
@@ -407,85 +447,82 @@
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel2.Controls.Add(this.removeButton, 1, 0);
             this.tableLayoutPanel2.Controls.Add(this.addButton, 0, 0);
-            this.tableLayoutPanel2.Location = new System.Drawing.Point(3, 285);
+            this.tableLayoutPanel2.Location = new System.Drawing.Point(3, 306);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
             this.tableLayoutPanel2.RowCount = 1;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(200, 40);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(178, 43);
             this.tableLayoutPanel2.TabIndex = 2;
             // 
             // removeButton
             // 
             this.removeButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.removeButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.removeButton.Image = ((System.Drawing.Image)(resources.GetObject("removeButton.Image")));
-            this.removeButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.removeButton.Location = new System.Drawing.Point(103, 3);
+            this.removeButton.Location = new System.Drawing.Point(92, 3);
             this.removeButton.Name = "removeButton";
-            this.removeButton.Size = new System.Drawing.Size(94, 34);
+            this.removeButton.Size = new System.Drawing.Size(83, 37);
             this.removeButton.TabIndex = 2;
-            this.removeButton.Text = "Remove";
-            this.removeButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+            this.removeButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
             this.removeButton.UseVisualStyleBackColor = true;
             this.removeButton.Click += new System.EventHandler(this.removeButton_Click);
             // 
             // addButton
             // 
             this.addButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.addButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.addButton.Image = ((System.Drawing.Image)(resources.GetObject("addButton.Image")));
-            this.addButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
             this.addButton.Location = new System.Drawing.Point(3, 3);
             this.addButton.Name = "addButton";
-            this.addButton.Size = new System.Drawing.Size(94, 34);
+            this.addButton.Size = new System.Drawing.Size(83, 37);
             this.addButton.TabIndex = 1;
-            this.addButton.Text = "Add";
-            this.addButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+            this.addButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
             this.addButton.UseVisualStyleBackColor = true;
             this.addButton.Click += new System.EventHandler(this.addButton_Click);
             // 
             // buttonPanel
             // 
             this.buttonPanel.ColumnCount = 3;
-            this.buttonPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Absolute, 87F));
-            this.buttonPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.buttonPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.buttonPanel.Controls.Add(this.muButton, 1, 0);
+            this.buttonPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.buttonPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
+            this.buttonPanel.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 33.33333F));
             this.buttonPanel.Controls.Add(this.saveButton, 1, 0);
+            this.buttonPanel.Controls.Add(this.muButton, 2, 0);
             this.buttonPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.buttonPanel.Location = new System.Drawing.Point(229, 285);
+            this.buttonPanel.Location = new System.Drawing.Point(187, 306);
             this.buttonPanel.Name = "buttonPanel";
-            this.buttonPanel.Padding = new System.Windows.Forms.Padding(0, 0, 15, 0);
             this.buttonPanel.RowCount = 1;
             this.buttonPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.buttonPanel.Size = new System.Drawing.Size(296, 40);
+            this.buttonPanel.Size = new System.Drawing.Size(338, 44);
             this.buttonPanel.TabIndex = 4;
-            // 
-            // muButton
-            // 
-            this.muButton.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.muButton.Image = global::Sshfs.Properties.Resources.mount;
-            this.muButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.muButton.Location = new System.Drawing.Point(187, 3);
-            this.muButton.Name = "muButton";
-            this.muButton.Size = new System.Drawing.Size(91, 34);
-            this.muButton.TabIndex = 4;
-            this.muButton.Text = "Mount";
-            this.muButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
-            this.muButton.UseVisualStyleBackColor = true;
-            this.muButton.Click += new System.EventHandler(this.muButton_Click);
             // 
             // saveButton
             // 
             this.saveButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.saveButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveButton.Image = global::Sshfs.Properties.Resources.save;
-            this.saveButton.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-            this.saveButton.Location = new System.Drawing.Point(90, 3);
+            this.saveButton.Location = new System.Drawing.Point(115, 3);
             this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(91, 34);
+            this.saveButton.Size = new System.Drawing.Size(106, 38);
             this.saveButton.TabIndex = 3;
             this.saveButton.Text = "Save";
-            this.saveButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageBeforeText;
+            this.saveButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
             this.saveButton.UseVisualStyleBackColor = true;
             this.saveButton.Click += new System.EventHandler(this.saveButton_Click);
+            // 
+            // muButton
+            // 
+            this.muButton.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.muButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.muButton.Image = global::Sshfs.Properties.Resources.mount;
+            this.muButton.Location = new System.Drawing.Point(227, 3);
+            this.muButton.Name = "muButton";
+            this.muButton.Size = new System.Drawing.Size(108, 38);
+            this.muButton.TabIndex = 4;
+            this.muButton.Text = "Mount";
+            this.muButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
+            this.muButton.UseVisualStyleBackColor = true;
+            this.muButton.Click += new System.EventHandler(this.muButton_Click);
             // 
             // openFileDialog
             // 
@@ -522,7 +559,7 @@
             this.contextMenu.ShowCheckMargin = true;
             this.contextMenu.ShowImageMargin = false;
             this.contextMenu.Size = new System.Drawing.Size(135, 148);
-            this.contextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.contextMenu_Opening);
+            this.contextMenu.Opening += new System.ComponentModel.CancelEventHandler(this.ContextMenu_Opening);
             // 
             // showMenuItem
             // 
@@ -544,8 +581,8 @@
             this.mountMenuItem.Name = "mountMenuItem";
             this.mountMenuItem.Size = new System.Drawing.Size(134, 22);
             this.mountMenuItem.Text = "Mount";
-            this.mountMenuItem.DropDownClosed += new System.EventHandler(this.mountMenuItem_DropDownClosed);
-            this.mountMenuItem.DropDownOpening += new System.EventHandler(this.mountMenuItem_DropDownOpening);
+            this.mountMenuItem.DropDownClosed += new System.EventHandler(this.MountMenuItem_DropDownClosed);
+            this.mountMenuItem.DropDownOpening += new System.EventHandler(this.MountMenuItem_DropDownOpening);
             // 
             // unmountMenuItem
             // 
@@ -553,8 +590,8 @@
             this.unmountMenuItem.Name = "unmountMenuItem";
             this.unmountMenuItem.Size = new System.Drawing.Size(134, 22);
             this.unmountMenuItem.Text = "Unmount";
-            this.unmountMenuItem.DropDownClosed += new System.EventHandler(this.unmountMenuItem_DropDownClosed);
-            this.unmountMenuItem.DropDownOpening += new System.EventHandler(this.unmountMenuItem_DropDownOpening);
+            this.unmountMenuItem.DropDownClosed += new System.EventHandler(this.UnmountMenuItem_DropDownClosed);
+            this.unmountMenuItem.DropDownOpening += new System.EventHandler(this.UnmountMenuItem_DropDownOpening);
             // 
             // toolStripSeparator2
             // 
@@ -588,10 +625,12 @@
             // 
             // MainForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 14F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(528, 328);
+            this.ClientSize = new System.Drawing.Size(528, 353);
             this.Controls.Add(this.tableLayoutPanel1);
+            this.Cursor = System.Windows.Forms.Cursors.Default;
+            this.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
@@ -600,6 +639,7 @@
             this.ShowInTaskbar = false;
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "MainForm";
+            this.Load += new System.EventHandler(this.MainForm_Load);
             this.Shown += new System.EventHandler(this.MainForm_Shown);
             this.tableLayoutPanel1.ResumeLayout(false);
             this.fieldsPanel.ResumeLayout(false);

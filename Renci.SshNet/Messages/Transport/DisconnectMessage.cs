@@ -1,13 +1,14 @@
-﻿using System.Text;
-
-namespace Renci.SshNet.Messages.Transport
+﻿namespace Renci.SshNet.Messages.Transport
 {
     /// <summary>
     /// Represents SSH_MSG_DISCONNECT message.
     /// </summary>
     [Message("SSH_MSG_DISCONNECT", 1)]
-    public class DisconnectMessage : Message,IKeyExchangedAllowed
+    public class DisconnectMessage : Message, IKeyExchangedAllowed
     {
+        private byte[] _description;
+        private byte[] _language;
+
         /// <summary>
         /// Gets disconnect reason code.
         /// </summary>
@@ -16,19 +17,46 @@ namespace Renci.SshNet.Messages.Transport
         /// <summary>
         /// Gets disconnect description.
         /// </summary>
-        public string Description { get; private set; }
+        public string Description
+        {
+            get { return Utf8.GetString(_description, 0, _description.Length); }
+            private set { _description = Utf8.GetBytes(value); }
+        }
 
         /// <summary>
         /// Gets message language.
         /// </summary>
-        public string Language { get; private set; }
+        public string Language
+        {
+            get { return Utf8.GetString(_language, 0, _language.Length); }
+            private set { _language = Utf8.GetBytes(value); }
+        }
+
+        /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // ReasonCode
+                capacity += 4; // Description length
+                capacity += _description.Length; // Description
+                capacity += 4; // Language length
+                capacity += _language.Length; // Language
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DisconnectMessage"/> class.
         /// </summary>
         public DisconnectMessage()
         {
-
         }
 
         /// <summary>
@@ -38,8 +66,9 @@ namespace Renci.SshNet.Messages.Transport
         /// <param name="message">The message.</param>
         public DisconnectMessage(DisconnectReason reasonCode, string message)
         {
-            this.ReasonCode = reasonCode;
-            this.Description = message;
+            ReasonCode = reasonCode;
+            Description = message;
+            Language = "en";
         }
 
         /// <summary>
@@ -47,9 +76,9 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void LoadData()
         {
-            this.ReasonCode = (DisconnectReason)this.ReadUInt32();
-            this.Description = this.ReadString();
-            this.Language = this.ReadString();
+            ReasonCode = (DisconnectReason) ReadUInt32();
+            _description = ReadBinary();
+            _language = ReadBinary();
         }
 
         /// <summary>
@@ -57,9 +86,14 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void SaveData()
         {
-            this.Write((uint)this.ReasonCode);
-            this.Write(this.Description, Encoding.UTF8);
-            this.Write(this.Language ?? "en");
+            Write((uint) ReasonCode);
+            WriteBinaryString(_description);
+            WriteBinaryString(_language);
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnDisconnectReceived(this);
         }
     }
 }

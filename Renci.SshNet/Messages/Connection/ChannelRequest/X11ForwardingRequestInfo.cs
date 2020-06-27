@@ -5,10 +5,12 @@
     /// </summary>
     internal class X11ForwardingRequestInfo : RequestInfo
     {
+        private byte[] _authenticationProtocol;
+
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string NAME = "x11-req";
+        public const string Name = "x11-req";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +20,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return X11ForwardingRequestInfo.NAME; }
+            get { return Name; }
         }
 
         /// <summary>
@@ -35,7 +37,11 @@
         /// <value>
         /// The authentication protocol.
         /// </value>
-        public string AuthenticationProtocol { get; set; }
+        public string AuthenticationProtocol
+        {
+            get { return Ascii.GetString(_authenticationProtocol, 0, _authenticationProtocol.Length); }
+            private set { _authenticationProtocol = Ascii.GetBytes(value); }
+        }
 
         /// <summary>
         /// Gets or sets the authentication cookie.
@@ -54,11 +60,32 @@
         public uint ScreenNumber { get; set; }
 
         /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 1; // IsSingleConnection
+                capacity += 4; // AuthenticationProtocol length
+                capacity += _authenticationProtocol.Length; // AuthenticationProtocol
+                capacity += 4; // AuthenticationCookie length
+                capacity += AuthenticationCookie.Length; // AuthenticationCookie
+                capacity += 4; // ScreenNumber
+                return capacity;
+            }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="X11ForwardingRequestInfo"/> class.
         /// </summary>
         public X11ForwardingRequestInfo()
         {
-            this.WantReply = true;
+            WantReply = true;
         }
 
         /// <summary>
@@ -71,10 +98,10 @@
         public X11ForwardingRequestInfo(bool isSingleConnection, string protocol, byte[] cookie, uint screenNumber)
             : this()
         {
-            this.IsSingleConnection = isSingleConnection;
-            this.AuthenticationProtocol = protocol;
-            this.AuthenticationCookie = cookie;
-            this.ScreenNumber = screenNumber;
+            IsSingleConnection = isSingleConnection;
+            AuthenticationProtocol = protocol;
+            AuthenticationCookie = cookie;
+            ScreenNumber = screenNumber;
         }
 
         /// <summary>
@@ -84,10 +111,10 @@
         {
             base.LoadData();
 
-            this.IsSingleConnection = this.ReadBoolean();
-            this.AuthenticationProtocol = this.ReadString();
-            this.AuthenticationCookie = this.ReadBinaryString();
-            this.ScreenNumber = this.ReadUInt32();
+            IsSingleConnection = ReadBoolean();
+            _authenticationProtocol = ReadBinary();
+            AuthenticationCookie = ReadBinary();
+            ScreenNumber = ReadUInt32();
         }
 
         /// <summary>
@@ -97,10 +124,10 @@
         {
             base.SaveData();
 
-            this.Write(this.IsSingleConnection);
-            this.Write(this.AuthenticationProtocol);
-            this.WriteBinaryString(this.AuthenticationCookie);
-            this.Write(this.ScreenNumber);
+            Write(IsSingleConnection);
+            WriteBinaryString(_authenticationProtocol);
+            WriteBinaryString(AuthenticationCookie);
+            Write(ScreenNumber);
         }
     }
 }

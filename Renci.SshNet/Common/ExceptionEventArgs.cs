@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Renci.SshNet.Common
 {
@@ -21,7 +18,7 @@ namespace Renci.SshNet.Common
         /// <param name="exception">An System.Exception that represents the error that occurred.</param>
         public ExceptionEventArgs(Exception exception)
         {
-            this.Exception = exception;
+            Exception = exception;
         }
     }
 }

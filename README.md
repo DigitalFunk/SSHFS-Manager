@@ -3,4 +3,4 @@ win-sshfs
 
 Fork of http://code.google.com/p/win-sshfs/
 
-Focusing on being compatible with XP and above
+Focusing on being compatible with Windows XP and above

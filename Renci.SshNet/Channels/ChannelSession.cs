@@ -1,20 +1,31 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Threading;
 using Renci.SshNet.Common;
 using Renci.SshNet.Messages.Connection;
-using System.Globalization;
 
 namespace Renci.SshNet.Channels
 {
     /// <summary>
     /// Implements Session SSH channel.
     /// </summary>
-    internal class ChannelSession : Channel
+    internal sealed class ChannelSession : ClientChannel, IChannelSession
     {
         /// <summary>
-        /// Counts faile channel open attempts
+        /// Counts failed channel open attempts
         /// </summary>
         private int _failedOpenAttempts;
+
+        /// <summary>
+        /// Holds a value indicating whether the session semaphore has been obtained by the current
+        /// channel.
+        /// </summary>
+        /// <value>
+        /// <c>0</c> when the session semaphore has not been obtained or has already been released,
+        /// and <c>1</c> when the session has been obtained and still needs to be released.
+        /// </value>
+        private int _sessionSemaphoreObtained;
 
         /// <summary>
         /// Wait handle to signal when response was received to open the channel
@@ -24,6 +35,18 @@ namespace Renci.SshNet.Channels
         private EventWaitHandle _channelRequestResponse = new ManualResetEvent(false);
 
         private bool _channelRequestSucces;
+
+        /// <summary>
+        /// Initializes a new <see cref="ChannelSession"/> instance.
+        /// </summary>
+        /// <param name="session">The session.</param>
+        /// <param name="localChannelNumber">The local channel number.</param>
+        /// <param name="localWindowSize">Size of the window.</param>
+        /// <param name="localPacketSize">Size of the packet.</param>
+        public ChannelSession(ISession session, uint localChannelNumber, uint localWindowSize, uint localPacketSize)
+            : base(session, localChannelNumber, localWindowSize, localPacketSize)
+        {
+        }
 
         /// <summary>
         /// Gets the type of the channel.
@@ -39,22 +62,26 @@ namespace Renci.SshNet.Channels
         /// <summary>
         /// Opens the channel.
         /// </summary>
-        public virtual void Open()
+        public void Open()
         {
-            if (!this.IsOpen)
+            //  Try to open channel several times
+            while (!IsOpen && _failedOpenAttempts < ConnectionInfo.RetryAttempts)
             {
-                //  Try to open channel several times
-                while (this._failedOpenAttempts < this.ConnectionInfo.RetryAttempts && !this.IsOpen)
+                SendChannelOpenMessage();
+                try
                 {
-                    this.SendChannelOpenMessage();
-                    this.WaitHandle(this._channelOpenResponseWaitHandle);
+                    WaitOnHandle(_channelOpenResponseWaitHandle);
                 }
-
-                if (!this.IsOpen)
+                catch (Exception)
                 {
-                    throw new SshException(string.Format(CultureInfo.CurrentCulture, "Failed to open a channel after {0} attempts.", this._failedOpenAttempts));
+                    // avoid leaking session semaphore
+                    ReleaseSemaphore();
+                    throw;
                 }
             }
+
+            if (!IsOpen)
+                throw new SshException(string.Format(CultureInfo.CurrentCulture, "Failed to open a channel after {0} attempts.", _failedOpenAttempts));
         }
 
         /// <summary>
@@ -66,8 +93,7 @@ namespace Renci.SshNet.Channels
         protected override void OnOpenConfirmation(uint remoteChannelNumber, uint initialWindowSize, uint maximumPacketSize)
         {
             base.OnOpenConfirmation(remoteChannelNumber, initialWindowSize, maximumPacketSize);
-
-            this._channelOpenResponseWaitHandle.Set();
+            _channelOpenResponseWaitHandle.Set();
         }
 
         /// <summary>
@@ -78,27 +104,15 @@ namespace Renci.SshNet.Channels
         /// <param name="language">The language.</param>
         protected override void OnOpenFailure(uint reasonCode, string description, string language)
         {
-            this._failedOpenAttempts++;
-
-            Debug.WriteLine(string.Format(CultureInfo.CurrentCulture, "Local channel: {0} attempts: {1}.", this.LocalChannelNumber, this._failedOpenAttempts));
-
-            this.SessionSemaphore.Release();
-
-            this._channelOpenResponseWaitHandle.Set();
+            _failedOpenAttempts++;
+            ReleaseSemaphore();
+            _channelOpenResponseWaitHandle.Set();
         }
 
-        /// <summary>
-        /// Called when channel is closed by the server.
-        /// </summary>
-        protected override void OnClose()
+        protected override void Close()
         {
-            base.OnClose();
-
-            //  This timeout needed since when channel is closed it does not immediately becomes available
-            //  but it takes time for the server to clean up resource and allow new channels to be created.
-            Thread.Sleep(100);
-
-            this.SessionSemaphore.Release();
+            base.Close();
+            ReleaseSemaphore();
         }
 
         /// <summary>
@@ -109,17 +123,16 @@ namespace Renci.SshNet.Channels
         /// <param name="rows">The rows.</param>
         /// <param name="width">The width.</param>
         /// <param name="height">The height.</param>
-        /// <param name="terminalMode">The terminal mode.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
-        public bool SendPseudoTerminalRequest(string environmentVariable, uint columns, uint rows, uint width, uint height, string terminalMode)
+        /// <param name="terminalModeValues">The terminal mode values.</param>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
+        public bool SendPseudoTerminalRequest(string environmentVariable, uint columns, uint rows, uint width, uint height, IDictionary<TerminalModes, uint> terminalModeValues)
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new PseudoTerminalRequestInfo(environmentVariable, columns, rows, width, height, terminalMode)));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new PseudoTerminalRequestInfo(environmentVariable, columns, rows, width, height, terminalModeValues)));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
@@ -129,16 +142,15 @@ namespace Renci.SshNet.Channels
         /// <param name="protocol">The protocol.</param>
         /// <param name="cookie">The cookie.</param>
         /// <param name="screenNumber">The screen number.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendX11ForwardingRequest(bool isSingleConnection, string protocol, byte[] cookie, uint screenNumber)
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new X11ForwardingRequestInfo(isSingleConnection, protocol, cookie, screenNumber)));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new X11ForwardingRequestInfo(isSingleConnection, protocol, cookie, screenNumber)));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
@@ -146,63 +158,74 @@ namespace Renci.SshNet.Channels
         /// </summary>
         /// <param name="variableName">Name of the variable.</param>
         /// <param name="variableValue">The variable value.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendEnvironmentVariableRequest(string variableName, string variableValue)
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new EnvironmentVariableRequestInfo(variableName, variableValue)));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new EnvironmentVariableRequestInfo(variableName, variableValue)));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
         /// Sends the shell request.
         /// </summary>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendShellRequest()
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new ShellRequestInfo()));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new ShellRequestInfo()));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
         /// Sends the exec request.
         /// </summary>
         /// <param name="command">The command.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendExecRequest(string command)
         {
-            this._channelRequestResponse.Reset();
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new ExecRequestInfo(command, ConnectionInfo.Encoding)));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
+        }
 
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new ExecRequestInfo(command)));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+        /// <summary>
+        /// Sends the exec request.
+        /// </summary>
+        /// <param name="breakLength">Length of the break.</param>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
+        public bool SendBreakRequest(uint breakLength)
+        {
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new BreakRequestInfo(breakLength)));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
         /// Sends the subsystem request.
         /// </summary>
         /// <param name="subsystem">The subsystem.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendSubsystemRequest(string subsystem)
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new SubsystemRequestInfo(subsystem)));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new SubsystemRequestInfo(subsystem)));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
@@ -212,11 +235,12 @@ namespace Renci.SshNet.Channels
         /// <param name="rows">The rows.</param>
         /// <param name="width">The width.</param>
         /// <param name="height">The height.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendWindowChangeRequest(uint columns, uint rows, uint width, uint height)
         {
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new WindowChangeRequestInfo(columns, rows, width, height)));
-
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new WindowChangeRequestInfo(columns, rows, width, height)));
             return true;
         }
 
@@ -224,11 +248,12 @@ namespace Renci.SshNet.Channels
         /// Sends the local flow request.
         /// </summary>
         /// <param name="clientCanDo">if set to <c>true</c> [client can do].</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendLocalFlowRequest(bool clientCanDo)
         {
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new XonXoffRequestInfo(clientCanDo)));
-
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new XonXoffRequestInfo(clientCanDo)));
             return true;
         }
 
@@ -236,11 +261,12 @@ namespace Renci.SshNet.Channels
         /// Sends the signal request.
         /// </summary>
         /// <param name="signalName">Name of the signal.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendSignalRequest(string signalName)
         {
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new SignalRequestInfo(signalName)));
-
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new SignalRequestInfo(signalName)));
             return true;
         }
 
@@ -248,11 +274,12 @@ namespace Renci.SshNet.Channels
         /// Sends the exit status request.
         /// </summary>
         /// <param name="exitStatus">The exit status.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendExitStatusRequest(uint exitStatus)
         {
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new ExitStatusRequestInfo(exitStatus)));
-
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new ExitStatusRequestInfo(exitStatus)));
             return true;
         }
 
@@ -263,44 +290,42 @@ namespace Renci.SshNet.Channels
         /// <param name="coreDumped">if set to <c>true</c> [core dumped].</param>
         /// <param name="errorMessage">The error message.</param>
         /// <param name="language">The language.</param>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendExitSignalRequest(string signalName, bool coreDumped, string errorMessage, string language)
         {
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new ExitSignalRequestInfo(signalName, coreDumped, errorMessage, language)));
-
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new ExitSignalRequestInfo(signalName, coreDumped, errorMessage, language)));
             return true;
         }
 
         /// <summary>
         /// Sends eow@openssh.com request.
         /// </summary>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendEndOfWriteRequest()
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new EndOfWriteRequestInfo()));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new EndOfWriteRequestInfo()));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
 
         /// <summary>
         /// Sends keepalive@openssh.com request.
         /// </summary>
-        /// <returns>true if request was successful; otherwise false.</returns>
+        /// <returns>
+        /// <c>true</c> if request was successful; otherwise <c>false</c>.
+        /// </returns>
         public bool SendKeepAliveRequest()
         {
-            this._channelRequestResponse.Reset();
-
-            this.SendMessage(new ChannelRequestMessage(this.RemoteChannelNumber, new KeepAliveRequestInfo()));
-
-            this._channelRequestResponse.WaitOne();
-
-            return this._channelRequestSucces;
+            _channelRequestResponse.Reset();
+            SendMessage(new ChannelRequestMessage(RemoteChannelNumber, new KeepAliveRequestInfo()));
+            WaitOnHandle(_channelRequestResponse);
+            return _channelRequestSucces;
         }
-
 
         /// <summary>
         /// Called when channel request was successful
@@ -308,8 +333,11 @@ namespace Renci.SshNet.Channels
         protected override void OnSuccess()
         {
             base.OnSuccess();
-            this._channelRequestSucces = true;
-            this._channelRequestResponse.Set();
+            _channelRequestSucces = true;
+
+            var channelRequestResponse = _channelRequestResponse;
+            if (channelRequestResponse != null)
+                channelRequestResponse.Set();
         }
 
         /// <summary>
@@ -318,21 +346,63 @@ namespace Renci.SshNet.Channels
         protected override void OnFailure()
         {
             base.OnFailure();
-            this._channelRequestSucces = false;
-            this._channelRequestResponse.Set();
+            _channelRequestSucces = false;
+
+            var channelRequestResponse = _channelRequestResponse;
+            if (channelRequestResponse != null)
+                channelRequestResponse.Set();
         }
 
         /// <summary>
         /// Sends the channel open message.
         /// </summary>
-        protected void SendChannelOpenMessage()
+        /// <exception cref="SshConnectionException">The client is not connected.</exception>
+        /// <exception cref="SshOperationTimeoutException">The operation timed out.</exception>
+        /// <exception cref="InvalidOperationException">The size of the packet exceeds the maximum size defined by the protocol.</exception>
+        /// <remarks>
+        /// <para>
+        /// When a session semaphore for this instance has not yet been obtained by this or any other thread,
+        /// the thread will block until such a semaphore is available and send a <see cref="ChannelOpenMessage"/>
+        /// to the remote host.
+        /// </para>
+        /// <para>
+        /// Note that the session semaphore is released in any of the following cases:
+        /// <list type="bullet">
+        ///   <item>
+        ///     <description>A <see cref="ChannelOpenFailureMessage"/> is received for the channel being opened.</description>
+        ///   </item>
+        ///   <item>
+        ///     <description>The remote host does not respond to the <see cref="ChannelOpenMessage"/> within the configured <see cref="ConnectionInfo.Timeout"/>.</description>
+        ///   </item>
+        ///   <item>
+        ///     <description>The remote host closes the channel.</description>
+        ///   </item>
+        ///   <item>
+        ///     <description>The <see cref="ChannelSession"/> is disposed.</description>
+        ///   </item>
+        ///   <item>
+        ///     <description>A socket error occurs sending a message to the remote host.</description>
+        ///   </item>
+        /// </list>
+        /// </para>
+        /// <para>
+        /// If the session semaphore was already obtained for this instance (and not released), then this method
+        /// immediately returns control to the caller. This should only happen when another thread has obtain the
+        /// session semaphore and already sent the <see cref="ChannelOpenMessage"/>, but the remote host did not
+        /// confirmed or rejected attempt to open the channel.
+        /// </para>
+        /// </remarks>
+        private void SendChannelOpenMessage()
         {
-            lock (this.SessionSemaphore)
+            // do not allow open to be ChannelOpenMessage to be sent again until we've
+            // had a response on the previous attempt for the current channel
+            if (Interlocked.CompareExchange(ref _sessionSemaphoreObtained, 1, 0) == 0)
             {
-                //  Ensure that channels are available
-                this.SessionSemaphore.Wait();
-
-                this.SendMessage(new ChannelOpenMessage(this.LocalChannelNumber, this.LocalWindowSize, this.PacketSize, new SessionChannelOpenInfo()));
+                SessionSemaphore.Wait();
+                SendMessage(new ChannelOpenMessage(LocalChannelNumber,
+                                                   LocalWindowSize,
+                                                   LocalPacketSize,
+                                                   new SessionChannelOpenInfo()));
             }
         }
 
@@ -342,23 +412,37 @@ namespace Renci.SshNet.Channels
         /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
-            if (this._channelOpenResponseWaitHandle != null)
-            {
-                this._channelOpenResponseWaitHandle.Dispose();
-                this._channelOpenResponseWaitHandle = null;
-            }
-
-            if (this._channelRequestResponse != null)
-            {
-                this._channelRequestResponse.Dispose();
-                this._channelRequestResponse = null;
-            }
-
             base.Dispose(disposing);
+
+            if (disposing)
+            {
+                var channelOpenResponseWaitHandle = _channelOpenResponseWaitHandle;
+                if (channelOpenResponseWaitHandle != null)
+                {
+                    _channelOpenResponseWaitHandle = null;
+                    channelOpenResponseWaitHandle.Dispose();
+                }
+
+                var channelRequestResponse = _channelRequestResponse;
+                if (channelRequestResponse != null)
+                {
+                    _channelRequestResponse = null;
+                    channelRequestResponse.Dispose();
+                }
+            }
         }
 
-
-
-      
+        /// <summary>
+        /// Releases the session semaphore.
+        /// </summary>
+        /// <remarks>
+        /// When the session semaphore has already been released, or was never obtained by
+        /// this instance, then this method does nothing.
+        /// </remarks>
+        private void ReleaseSemaphore()
+        {
+            if (Interlocked.CompareExchange(ref _sessionSemaphoreObtained, 0, 1) == 1)
+                SessionSemaphore.Release();
+        }
     }
 }

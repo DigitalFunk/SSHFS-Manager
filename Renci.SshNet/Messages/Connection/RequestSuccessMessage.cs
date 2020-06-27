@@ -12,6 +12,23 @@
         public uint? BoundPort { get; private set; }
 
         /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                if (BoundPort.HasValue)
+                    capacity += 4; // BoundPort
+                return capacity;
+            }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="RequestSuccessMessage"/> class.
         /// </summary>
         public RequestSuccessMessage()
@@ -25,7 +42,7 @@
         /// <param name="boundPort">The bound port.</param>
         public RequestSuccessMessage(uint boundPort)
         {
-            this.BoundPort = boundPort;
+            BoundPort = boundPort;
         }
 
         /// <summary>
@@ -33,8 +50,8 @@
         /// </summary>
         protected override void LoadData()
         {
-            if (!this.IsEndOfData)
-                this.BoundPort = this.ReadUInt32();
+            if (!IsEndOfData)
+                BoundPort = ReadUInt32();
         }
 
         /// <summary>
@@ -42,8 +59,13 @@
         /// </summary>
         protected override void SaveData()
         {
-            if (this.BoundPort != null)
-                this.Write(this.BoundPort.Value);
+            if (BoundPort.HasValue)
+                Write(BoundPort.Value);
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnRequestSuccessReceived(this);
         }
     }
 }

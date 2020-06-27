@@ -422,7 +422,7 @@ namespace Sshfs
         private void openFileDialog_FileOk(object sender, CancelEventArgs e)
         {
             //don't check larger files
-            if (new FileInfo(openFileDialog.FileName).Length>4*4*1024||!PrivateKeyFile.IsValid(openFileDialog.FileName))
+            if (!(new FileInfo(openFileDialog.FileName).Length <= 4 * 4 * 1024 && PrivateKeyFile.IsValid(openFileDialog.FileName)))
             {
                 
                 MessageBox.Show(this,
@@ -530,60 +530,115 @@ namespace Sshfs
             base.OnFormClosed(e);
         }
 
-        private  void box_Leave(object sender, EventArgs e)
+        private  void Box_Leave(object sender, EventArgs e)
         {
             var box = sender as TextBox;
             box.Text = box.Text.Trim();
         }
 
-        private void contextMenu_Opening(object sender, CancelEventArgs e)
+        private void ContextMenu_Opening(object sender, CancelEventArgs e)
         {
             mountMenuItem.Enabled = _drives.Any(drive => drive.Status == DriveStatus.Unmounted);
             unmountMenuItem.Enabled = _drives.Any(drive => drive.Status == DriveStatus.Mounted);
         }
 
-        private void unmountMenuItem_DropDownOpening(object sender, EventArgs e)
+        private void UnmountMenuItem_DropDownOpening(object sender, EventArgs e)
         {
             foreach (var drive in _drives.Where(d => d.Status == DriveStatus.Mounted))
             {
                 var umitem = unmountMenuItem.DropDownItems.Add(drive.Name);
                 umitem.Tag = drive;
-                umitem.Click += umitem_Click;
+                umitem.Click += Umitem_Click;
             }
         }
 
-        private void umitem_Click(object sender, EventArgs e)
+        private void Umitem_Click(object sender, EventArgs e)
         {
             ((sender as ToolStripItem).Tag as SftpDrive).Unmount();
         }
 
 
-        private void unmountMenuItem_DropDownClosed(object sender, EventArgs e)
+        private void UnmountMenuItem_DropDownClosed(object sender, EventArgs e)
         {
             unmountMenuItem.DropDownItems.Clear();
         }
 
-        private void mountMenuItem_DropDownClosed(object sender, EventArgs e)
+        private void MountMenuItem_DropDownClosed(object sender, EventArgs e)
         {
             mountMenuItem.DropDownItems.Clear();
         }
 
-        private void mountMenuItem_DropDownOpening(object sender, EventArgs e)
+        private void MountMenuItem_DropDownOpening(object sender, EventArgs e)
         {
             foreach (var drive in _drives.Where(d => d.Status == DriveStatus.Unmounted))
             {
                 var mitem = mountMenuItem.DropDownItems.Add(drive.Name);
                 mitem.Tag = drive;
-                mitem.Click += mitem_Click;
+                mitem.Click += Mitem_Click;
             }
         }
 
-        private void mitem_Click(object sender, EventArgs e)
+        private void Mitem_Click(object sender, EventArgs e)
         {
             var drive = (sender as ToolStripItem).Tag as SftpDrive;
             if (driveListView.SelectedItems[0].Tag == drive)
                 muButton.Enabled = false;
             MountDrive(drive);
+        }
+
+        private void MountCheck_CheckedChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void AuthLabel_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void MainForm_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label5_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label2_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label3_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label7_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label6_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void fieldsPanel_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }

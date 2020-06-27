@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Globalization;
 
 namespace Renci.SshNet.Common
 {
@@ -11,76 +9,110 @@ namespace Renci.SshNet.Common
     /// </summary>
     public abstract class SshData
     {
-        /// <summary>
-        /// Data byte array that hold message unencrypted data
-        /// </summary>
-        private List<byte> _data;
+        internal const int DefaultCapacity = 64;
 
-        private int _readerIndex;
+#if FEATURE_ENCODING_ASCII
+        internal static readonly Encoding Ascii = Encoding.ASCII;
+#else
+        internal static readonly Encoding Ascii = new ASCIIEncoding();
+#endif
+        internal static readonly Encoding Utf8 = Encoding.UTF8;
+
+        private SshDataStream _stream;
+
+        /// <summary>
+        /// Gets the underlying <see cref="SshDataStream"/> that is used for reading and writing SSH data.
+        /// </summary>
+        /// <value>
+        /// The underlying <see cref="SshDataStream"/> that is used for reading and writing SSH data.
+        /// </value>
+        protected SshDataStream DataStream
+        {
+            get { return _stream; }
+        }
 
         /// <summary>
         /// Gets a value indicating whether all data from the buffer has been read.
         /// </summary>
         /// <value>
-        /// 	<c>true</c> if this instance is end of data; otherwise, <c>false</c>.
+        /// <c>true</c> if this instance is end of data; otherwise, <c>false</c>.
         /// </value>
-        public bool IsEndOfData
+        protected bool IsEndOfData
         {
             get
             {
-                return this._readerIndex >= this._data.Count();
+                return _stream.Position >= _stream.Length;
             }
         }
 
-        private byte[] _loadedData;
-
         /// <summary>
-        /// Gets the index that represents zero in current data type.
+        /// Gets the size of the message in bytes.
         /// </summary>
         /// <value>
-        /// The index of the zero reader.
+        /// The size of the messages in bytes.
         /// </value>
-        protected virtual int ZeroReaderIndex
+        protected virtual int BufferCapacity
         {
-            get
-            {
-                return 0;
-            }
+            get { return 0; }
         }
 
         /// <summary>
-        /// Gets data bytes array
+        /// Gets data bytes array.
         /// </summary>
-        /// <returns></returns>
-        public virtual byte[] GetBytes()
+        /// <returns>
+        /// A <see cref="Byte"/> array representation of data structure.
+        /// </returns>
+        public byte[] GetBytes()
         {
-            this._data = new List<byte>();
-
-            this.SaveData();
-
-            return this._data.ToArray();
+            var messageLength = BufferCapacity;
+            var capacity = messageLength != -1 ? messageLength : DefaultCapacity;
+            var dataStream = new SshDataStream(capacity);
+            WriteBytes(dataStream);
+            return dataStream.ToArray();
         }
 
-        internal T OfType<T>() where T : SshData, new()
+        /// <summary>
+        /// Writes the current message to the specified <see cref="SshDataStream"/>.
+        /// </summary>
+        /// <param name="stream">The <see cref="SshDataStream"/> to write the message to.</param>
+        protected virtual void WriteBytes(SshDataStream stream)
         {
-            var result = new T();
-            result.LoadBytes(this._loadedData);
-            result.LoadData();
-            return result;
+            _stream = stream;
+            SaveData();
         }
 
         /// <summary>
         /// Loads data from specified bytes.
         /// </summary>
-        /// <param name="value">Bytes array.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="value"/> is null.</exception>
-        public void Load(byte[] value)
+        /// <param name="data">Bytes array.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
+        public void Load(byte[] data)
         {
-            if (value == null)
-                throw new ArgumentNullException("value");
+            if (data == null)
+                throw new ArgumentNullException("data");
 
-            this.LoadBytes(value);
-            this.LoadData();
+            LoadInternal(data, 0, data.Length);
+        }
+
+        /// <summary>
+        /// Loads data from the specified buffer.
+        /// </summary>
+        /// <param name="data">Bytes array.</param>
+        /// <param name="offset">The zero-based offset in <paramref name="data"/> at which to begin reading SSH data.</param>
+        /// <param name="count">The number of bytes to load.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
+        public void Load(byte[] data, int offset, int count)
+        {
+            if (data == null)
+                throw new ArgumentNullException("data");
+
+            LoadInternal(data, offset, count);
+        }
+
+        private void LoadInternal(byte[] value, int offset, int count)
+        {
+            _stream = new SshDataStream(value, offset, count);
+            LoadData();
         }
 
         /// <summary>
@@ -94,38 +126,14 @@ namespace Renci.SshNet.Common
         protected abstract void SaveData();
 
         /// <summary>
-        /// Loads data bytes into internal buffer.
-        /// </summary>
-        /// <param name="bytes">The bytes.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="bytes"/> is null.</exception>
-        protected void LoadBytes(byte[] bytes)
-        {
-            // Note about why I check for null here, and in Load(byte[]) in this class.
-            // This method is called by several other classes, such as SshNet.Messages.Message, SshNet.Sftp.SftpMessage.
-            if (bytes == null)
-                throw new ArgumentNullException("bytes");
-
-            this.ResetReader();
-            this._loadedData = bytes;
-            this._data = new List<byte>(bytes);
-        }
-
-        /// <summary>
-        /// Resets internal data reader index.
-        /// </summary>
-        protected void ResetReader()
-        {
-            this._readerIndex = this.ZeroReaderIndex;  //  Set to 1 to skip first byte which specifies message type
-        }
-
-        /// <summary>
         /// Reads all data left in internal buffer at current position.
         /// </summary>
         /// <returns>An array of bytes containing the remaining data in the internal buffer.</returns>
         protected byte[] ReadBytes()
         {
-            var data = new byte[this._data.Count - this._readerIndex];
-            this._data.CopyTo(this._readerIndex, data, 0, data.Length);
+            var bytesLength = (int) (_stream.Length - _stream.Position);
+            var data = new byte[bytesLength];
+            _stream.Read(data, 0, bytesLength);
             return data;
         }
 
@@ -140,13 +148,14 @@ namespace Renci.SshNet.Common
             // Note that this also prevents allocating non-relevant lengths, such as if length is greater than _data.Count but less than int.MaxValue.
             // For the nerds, the condition translates to: if (length > data.Count && length < int.MaxValue)
             // Which probably would cause all sorts of exception, most notably OutOfMemoryException.
-            if (length > this._data.Count)
+
+            var data = new byte[length];
+            var bytesRead = _stream.Read(data, 0, length);
+
+            if (bytesRead < length)
                 throw new ArgumentOutOfRangeException("length");
 
-            var result = new byte[length];
-            this._data.CopyTo(this._readerIndex, result, 0, length);
-            this._readerIndex += length;
-            return result;
+            return data;
         }
 
         /// <summary>
@@ -155,7 +164,10 @@ namespace Renci.SshNet.Common
         /// <returns>Byte read.</returns>
         protected byte ReadByte()
         {
-            return this.ReadBytes(1).FirstOrDefault();
+            var byteRead = _stream.ReadByte();
+            if (byteRead == -1)
+                throw new InvalidOperationException("Attempt to read past the end of the SSH data stream.");
+            return (byte) byteRead;
         }
 
         /// <summary>
@@ -164,114 +176,81 @@ namespace Renci.SshNet.Common
         /// <returns>Boolean read.</returns>
         protected bool ReadBoolean()
         {
-            return this.ReadByte() == 0 ? false : true;
+            return ReadByte() != 0;
         }
 
         /// <summary>
         /// Reads next uint16 data type from internal buffer.
         /// </summary>
         /// <returns>uint16 read</returns>
-        protected UInt16 ReadUInt16()
+        protected ushort ReadUInt16()
         {
-            var data = this.ReadBytes(2);
-            return (ushort)(data[0] << 8 | data[1]);
+            return Pack.BigEndianToUInt16(ReadBytes(2));
         }
 
         /// <summary>
         /// Reads next uint32 data type from internal buffer.
         /// </summary>
         /// <returns>uint32 read</returns>
-        protected UInt32 ReadUInt32()
+        protected uint ReadUInt32()
         {
-            var data = this.ReadBytes(4);
-            return (uint)(data[0] << 24 | data[1] << 16 | data[2] << 8 | data[3]);
+            return Pack.BigEndianToUInt32(ReadBytes(4));
         }
 
         /// <summary>
         /// Reads next uint64 data type from internal buffer.
         /// </summary>
         /// <returns>uint64 read</returns>
-        protected UInt64 ReadUInt64()
+        protected ulong ReadUInt64()
         {
-            var data = this.ReadBytes(8);
-            return (uint)(data[0] << 56 | data[1] << 48 | data[2] << 40 | data[3] << 32 | data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7]);
+            return Pack.BigEndianToUInt64(ReadBytes(8));
         }
 
         /// <summary>
-        /// Reads next int64 data type from internal buffer.
+        /// Reads next string data type from internal buffer using the specific encoding.
         /// </summary>
-        /// <returns>int64 read</returns>
-        protected Int64 ReadInt64()
+        /// <returns>
+        /// The <see cref="string"/> read.
+        /// </returns>
+        protected string ReadString(Encoding encoding)
         {
-            var data = this.ReadBytes(8);
-            return (int)(data[0] << 56 | data[1] << 48 | data[2] << 40 | data[3] << 32 | data[4] << 24 | data[5] << 16 | data[6] << 8 | data[7]);
+            return _stream.ReadString(encoding);
         }
 
         /// <summary>
-        /// Reads next string data type from internal buffer.
+        /// Reads next data type as byte array from internal buffer.
         /// </summary>
-        /// <returns>string read</returns>
-        protected string ReadString()
+        /// <returns>
+        /// The bytes read.
+        /// </returns>
+        protected byte[] ReadBinary()
         {
-            var length = this.ReadUInt32();
-
-            if (length > (uint)int.MaxValue)
-            {
-                throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Strings longer than {0} is not supported.", int.MaxValue));
-            }
-            return Encoding.UTF8.GetString(this.ReadBytes((int)length), 0, (int)length);
-        }
-
-        /// <summary>
-        /// Reads next string data type from internal buffer.
-        /// </summary>
-        /// <returns>string read</returns>
-        protected byte[] ReadBinaryString()
-        {
-            var length = this.ReadUInt32();
-
-            if (length > (uint)int.MaxValue)
-            {
-                throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Strings longer than {0} is not supported.", int.MaxValue));
-            }
-
-            return this.ReadBytes((int)length);
-        }
-
-        /// <summary>
-        /// Reads next mpint data type from internal buffer.
-        /// </summary>
-        /// <returns>mpint read.</returns>
-        protected BigInteger ReadBigInt()
-        {
-            var length = this.ReadUInt32();
-
-            var data = this.ReadBytes((int)length);
-
-            return new BigInteger(data.Reverse().ToArray());
+            return _stream.ReadBinary();
         }
 
         /// <summary>
         /// Reads next name-list data type from internal buffer.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>
+        /// String array or read data.
+        /// </returns>
         protected string[] ReadNamesList()
         {
-            var namesList = this.ReadString();
+            var namesList = ReadString(Ascii);
             return namesList.Split(',');
         }
 
         /// <summary>
         /// Reads next extension-pair data type from internal buffer.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>Extensions pair dictionary.</returns>
         protected IDictionary<string, string> ReadExtensionPair()
         {
-            Dictionary<string, string> result = new Dictionary<string, string>();
-            while (this._readerIndex < this._data.Count)
+            var result = new Dictionary<string, string>();
+            while (!IsEndOfData)
             {
-                var extensionName = this.ReadString();
-                var extensionData = this.ReadString();
+                var extensionName = ReadString(Ascii);
+                var extensionData = ReadString(Ascii);
                 result.Add(extensionName, extensionData);
             }
             return result;
@@ -281,110 +260,107 @@ namespace Renci.SshNet.Common
         /// Writes bytes array data into internal buffer.
         /// </summary>
         /// <param name="data">Byte array data to write.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="data"/> is null.</exception>
-        protected void Write(IEnumerable<byte> data)
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
+        protected void Write(byte[] data)
         {
-            this._data.AddRange(data);
+            _stream.Write(data);
         }
 
         /// <summary>
-        /// Writes byte data into internal buffer.
+        /// Writes a sequence of bytes to the current SSH data stream and advances the current position
+        /// within this stream by the number of bytes written.
         /// </summary>
-        /// <param name="data">Byte data to write.</param>
+        /// <param name="buffer">An array of bytes. This method write <paramref name="count"/> bytes from buffer to the current SSH data stream.</param>
+        /// <param name="offset">The zero-based offset in <paramref name="buffer"/> at which to begin writing bytes to the SSH data stream.</param>
+        /// <param name="count">The number of bytes to be written to the current SSH data stream.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is greater than the buffer length.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="offset"/> or <paramref name="count"/> is negative.</exception>
+        protected void Write(byte[] buffer, int offset, int count)
+        {
+            _stream.Write(buffer, offset, count);
+        }
+
+        /// <summary>
+        /// Writes <see cref="byte"/> data into internal buffer.
+        /// </summary>
+        /// <param name="data"><see cref="byte"/> data to write.</param>
         protected void Write(byte data)
         {
-            this._data.Add(data);
+            _stream.WriteByte(data);
         }
 
         /// <summary>
-        /// Writes boolean data into internal buffer.
+        /// Writes <see cref="bool"/> into internal buffer.
         /// </summary>
-        /// <param name="data">Boolean data to write.</param>
+        /// <param name="data"><see cref="bool" /> data to write.</param>
         protected void Write(bool data)
         {
-            if (data)
-            {
-                this.Write(1);
-            }
-            else
-            {
-                this.Write(0);
-            }
+            Write(data ? (byte) 1 : (byte) 0);
         }
 
         /// <summary>
-        /// Writes uint16 data into internal buffer.
+        /// Writes <see cref="uint"/> data into internal buffer.
         /// </summary>
-        /// <param name="data">uint16 data to write.</param>
-        protected void Write(UInt16 data)
+        /// <param name="data"><see cref="uint"/> data to write.</param>
+        protected void Write(uint data)
         {
-            this.Write(data.GetBytes());
+            _stream.Write(data);
         }
 
         /// <summary>
-        /// Writes uint32 data into internal buffer.
+        /// Writes <see cref="ulong" /> data into internal buffer.
         /// </summary>
-        /// <param name="data">uint32 data to write.</param>
-        protected void Write(UInt32 data)
+        /// <param name="data"><see cref="ulong"/> data to write.</param>
+        protected void Write(ulong data)
         {
-            this.Write(data.GetBytes());
+            _stream.Write(data);
         }
 
         /// <summary>
-        /// Writes uint64 data into internal buffer.
+        /// Writes <see cref="string"/> data into internal buffer using default encoding.
         /// </summary>
-        /// <param name="data">uint64 data to write.</param>
-        protected void Write(UInt64 data)
-        {
-            this.Write(data.GetBytes());
-        }
-
-        /// <summary>
-        /// Writes int64 data into internal buffer.
-        /// </summary>
-        /// <param name="data">int64 data to write.</param>
-        protected void Write(Int64 data)
-        {
-            this.Write(data.GetBytes());
-        }
-
-        /// <summary>
-        /// Writes string data into internal buffer.
-        /// </summary>
-        /// <param name="data">string data to write.</param>
-        /// <param name="encoding">String text encoding to use.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="data"/> is null.</exception>
-        protected void Write(string data, Encoding encoding)
-        {
-            if (data == null)
-                throw new ArgumentNullException("data");
-
-            var bytes = encoding.GetBytes(data);
-            this.Write((uint)bytes.Length);
-            this.Write(bytes);
-        }
-
-        /// <summary>
-        /// Writes string data into internal buffer.
-        /// </summary>
-        /// <param name="data">string data to write.</param>
+        /// <param name="data"><see cref="string"/> data to write.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
         protected void Write(string data)
         {
-            this.Write(data, Encoding.UTF8);
+            Write(data, Utf8);
         }
 
         /// <summary>
-        /// Writes string data into internal buffer.
+        /// Writes <see cref="string"/> data into internal buffer using the specified encoding.
         /// </summary>
-        /// <param name="data">string data to write.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="data"/> is null.</exception>
-        protected void WriteBinaryString(byte[] data)
+        /// <param name="data"><see cref="string"/> data to write.</param>
+        /// <param name="encoding">The character encoding to use.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="encoding"/> is <c>null</c>.</exception>
+        protected void Write(string data, Encoding encoding)
         {
-            if (data == null)
-                throw new ArgumentNullException("data");
+            _stream.Write(data, encoding);
+        }
 
-            this.Write((uint)data.Length);
-            this._data.AddRange(data);
+        /// <summary>
+        /// Writes data into internal buffer.
+        /// </summary>
+        /// <param name="buffer">The data to write.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <c>null</c>.</exception>
+        protected void WriteBinaryString(byte[] buffer)
+        {
+            _stream.WriteBinary(buffer);
+        }
+
+        /// <summary>
+        /// Writes data into internal buffer.
+        /// </summary>
+        /// <param name="buffer">An array of bytes. This method write <paramref name="count"/> bytes from buffer to the current SSH data stream.</param>
+        /// <param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin writing bytes to the SSH data stream.</param>
+        /// <param name="count">The number of bytes to be written to the current SSH data stream.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is greater than the buffer length.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="offset"/> or <paramref name="count"/> is negative.</exception>
+        protected void WriteBinary(byte[] buffer, int offset, int count)
+        {
+            _stream.WriteBinary(buffer, offset, count);
         }
 
         /// <summary>
@@ -393,9 +369,7 @@ namespace Renci.SshNet.Common
         /// <param name="data">mpint data to write.</param>
         protected void Write(BigInteger data)
         {
-            var bytes = data.ToByteArray().Reverse().ToList();
-            this.Write((uint)bytes.Count);
-            this.Write(bytes);
+            _stream.Write(data);
         }
 
         /// <summary>
@@ -404,7 +378,7 @@ namespace Renci.SshNet.Common
         /// <param name="data">name-list data to write.</param>
         protected void Write(string[] data)
         {
-            this.Write(string.Join(",", data));
+            Write(string.Join(",", data), Ascii);
         }
 
         /// <summary>
@@ -415,8 +389,8 @@ namespace Renci.SshNet.Common
         {
             foreach (var item in data)
             {
-                this.Write(item.Key);
-                this.Write(item.Value);
+                Write(item.Key, Ascii);
+                Write(item.Value, Ascii);
             }
         }
     }

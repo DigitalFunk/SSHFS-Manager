@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 
 namespace Renci.SshNet.Messages.Connection
 {
@@ -7,10 +8,12 @@ namespace Renci.SshNet.Messages.Connection
     /// </summary>
     internal class ExecRequestInfo : RequestInfo
     {
+        private byte[] _command;
+
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string NAME = "exec";
+        public const string Name = "exec";
 
         /// <summary>
         /// Gets the name of the request.
@@ -20,30 +23,69 @@ namespace Renci.SshNet.Messages.Connection
         /// </value>
         public override string RequestName
         {
-            get { return ExecRequestInfo.NAME; }
+            get { return Name; }
         }
 
         /// <summary>
         /// Gets command to execute.
         /// </summary>
-        public string Command { get; private set; }
+        /// <value>
+        /// The command.
+        /// </value>
+        public string Command
+        {
+            get { return Encoding.GetString(_command, 0, _command.Length); }
+        }
+
+        /// <summary>
+        /// Gets the encoding.
+        /// </summary>
+        /// <value>
+        /// The encoding.
+        /// </value>
+        public Encoding Encoding { get; private set; }
+
+        /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // Command length
+                capacity += _command.Length; // Command
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExecRequestInfo"/> class.
         /// </summary>
         public ExecRequestInfo()
         {
-            this.WantReply = true;
+            WantReply = true;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExecRequestInfo"/> class.
         /// </summary>
         /// <param name="command">The command.</param>
-        public ExecRequestInfo(string command)
+        /// <param name="encoding">The character encoding to use.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="command"/> or <paramref name="encoding"/> is <c>null</c>.</exception>
+        public ExecRequestInfo(string command, Encoding encoding)
             : this()
         {
-            this.Command = command;
+            if (command == null)
+                throw new ArgumentNullException("command");
+            if (encoding == null)
+                throw new ArgumentNullException("encoding");
+
+            _command = encoding.GetBytes(command);
+            Encoding = encoding;
         }
 
         /// <summary>
@@ -53,7 +95,8 @@ namespace Renci.SshNet.Messages.Connection
         {
             base.LoadData();
 
-            this.Command = this.ReadString();
+            _command = ReadBinary();
+            Encoding = Utf8;
         }
 
         /// <summary>
@@ -63,7 +106,7 @@ namespace Renci.SshNet.Messages.Connection
         {
             base.SaveData();
 
-            this.Write(this.Command, Encoding.UTF8);
+            WriteBinaryString(_command);
         }
     }
 }

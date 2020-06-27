@@ -6,22 +6,28 @@ namespace Renci.SshNet.Messages.Connection
     /// <summary>
     /// Represents SSH_MSG_CHANNEL_OPEN message.
     /// </summary>
-    [Message("SSH_MSG_CHANNEL_OPEN", 90)]
-    public class ChannelOpenMessage : ChannelMessage
+    [Message("SSH_MSG_CHANNEL_OPEN", MessageNumber)]
+    public class ChannelOpenMessage : Message
     {
+        internal const byte MessageNumber = 90;
+
+        private byte[] _infoBytes;
+
         /// <summary>
-        /// Gets the type of the channel.
+        /// Gets the type of the channel as ASCII encoded byte array.
         /// </summary>
         /// <value>
         /// The type of the channel.
         /// </value>
-        public string ChannelType
-        {
-            get
-            {
-                return this.Info.ChannelType;
-            }
-        }
+        public byte[] ChannelType { get; private set; }
+
+        /// <summary>
+        /// Gets or sets the local channel number.
+        /// </summary>
+        /// <value>
+        /// The local channel number.
+        /// </value>
+        public uint LocalChannelNumber { get; protected set; }
 
         /// <summary>
         /// Gets the initial size of the window.
@@ -45,6 +51,27 @@ namespace Renci.SshNet.Messages.Connection
         public ChannelOpenInfo Info { get; private set; }
 
         /// <summary>
+        /// Gets the size of the message in bytes.
+        /// </summary>
+        /// <value>
+        /// The size of the messages in bytes.
+        /// </value>
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // ChannelType length
+                capacity += ChannelType.Length; // ChannelType
+                capacity += 4; // LocalChannelNumber
+                capacity += 4; // InitialWindowSize
+                capacity += 4; // MaximumPacketSize
+                capacity += _infoBytes.Length; // Info
+                return capacity;
+            }
+        }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="ChannelOpenMessage"/> class.
         /// </summary>
         public ChannelOpenMessage()
@@ -58,13 +85,19 @@ namespace Renci.SshNet.Messages.Connection
         /// <param name="channelNumber">The channel number.</param>
         /// <param name="initialWindowSize">Initial size of the window.</param>
         /// <param name="maximumPacketSize">Maximum size of the packet.</param>
-        /// <param name="info">The info.</param>
+        /// <param name="info">Information specific to the type of the channel to open.</param>
+        /// <exception cref="ArgumentNullException"><paramref name="info"/> is <c>null</c>.</exception>
         public ChannelOpenMessage(uint channelNumber, uint initialWindowSize, uint maximumPacketSize, ChannelOpenInfo info)
         {
-            this.LocalChannelNumber = channelNumber;
-            this.InitialWindowSize = initialWindowSize;
-            this.MaximumPacketSize = maximumPacketSize;
-            this.Info = info;
+            if (info == null)
+                throw new ArgumentNullException("info");
+
+            ChannelType = Ascii.GetBytes(info.ChannelType);
+            LocalChannelNumber = channelNumber;
+            InitialWindowSize = initialWindowSize;
+            MaximumPacketSize = maximumPacketSize;
+            Info = info;
+            _infoBytes = info.GetBytes();
         }
 
         /// <summary>
@@ -72,35 +105,31 @@ namespace Renci.SshNet.Messages.Connection
         /// </summary>
         protected override void LoadData()
         {
-            var channelName = this.ReadString();
-            this.LocalChannelNumber = this.ReadUInt32();
-            this.InitialWindowSize = this.ReadUInt32();
-            this.MaximumPacketSize = this.ReadUInt32();
-            var bytes = this.ReadBytes();
+            ChannelType = ReadBinary();
+            LocalChannelNumber = ReadUInt32();
+            InitialWindowSize = ReadUInt32();
+            MaximumPacketSize = ReadUInt32();
+            _infoBytes = ReadBytes();
 
-            if (channelName == SessionChannelOpenInfo.NAME)
-            {
-                this.Info = new SessionChannelOpenInfo();
-            }
-            else if (channelName == X11ChannelOpenInfo.NAME)
-            {
-                this.Info = new X11ChannelOpenInfo();
-            }
-            else if (channelName == DirectTcpipChannelInfo.NAME)
-            {
-                this.Info = new DirectTcpipChannelInfo();
-            }
-            else if (channelName == ForwardedTcpipChannelInfo.NAME)
-            {
-                this.Info = new ForwardedTcpipChannelInfo();
-            }
-            else
-            {
-                throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Channel type '{0}' is not supported.", channelName));
-            }
+            var channelName = Ascii.GetString(ChannelType, 0, ChannelType.Length);
 
-            this.Info.Load(bytes);
-
+            switch (channelName)
+            {
+                case SessionChannelOpenInfo.Name:
+                    Info = new SessionChannelOpenInfo(_infoBytes);
+                    break;
+                case X11ChannelOpenInfo.Name:
+                    Info = new X11ChannelOpenInfo(_infoBytes);
+                    break;
+                case DirectTcpipChannelInfo.NAME:
+                    Info = new DirectTcpipChannelInfo(_infoBytes);
+                    break;
+                case ForwardedTcpipChannelInfo.NAME:
+                    Info = new ForwardedTcpipChannelInfo(_infoBytes);
+                    break;
+                default:
+                    throw new NotSupportedException(string.Format(CultureInfo.CurrentCulture, "Channel type '{0}' is not supported.", channelName));
+            }
         }
 
         /// <summary>
@@ -108,11 +137,16 @@ namespace Renci.SshNet.Messages.Connection
         /// </summary>
         protected override void SaveData()
         {
-            this.Write(this.ChannelType);
-            this.Write(this.LocalChannelNumber);
-            this.Write(this.InitialWindowSize);
-            this.Write(this.MaximumPacketSize);
-            this.Write(this.Info.GetBytes());
+            WriteBinaryString(ChannelType);
+            Write(LocalChannelNumber);
+            Write(InitialWindowSize);
+            Write(MaximumPacketSize);
+            Write(_infoBytes);
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnChannelOpenReceived(this);
         }
     }
 }

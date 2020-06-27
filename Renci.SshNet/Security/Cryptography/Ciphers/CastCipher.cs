@@ -1,20 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Security.Cryptography.Ciphers
 {
     /// <summary>
     /// Implements CAST cipher algorithm
     /// </summary>
-    public class CastCipher : BlockCipher
+    public sealed class CastCipher : BlockCipher
     {
         internal static readonly int MAX_ROUNDS = 16;
+
         internal static readonly int RED_ROUNDS = 12;
 
-        private int[] _kr = new int[17];        // the rotating round key
-        private uint[] _km = new uint[17];        // the masking round key
+        /// <summary>
+        /// The rotating round key
+        /// </summary>
+        private readonly int[] _kr = new int[17];
+
+        /// <summary>
+        /// The masking round key
+        /// </summary>
+        private readonly uint[] _km = new uint[17];
 
         private int _rounds = MAX_ROUNDS;
 
@@ -24,7 +30,7 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
         /// <param name="key">The key.</param>
         /// <param name="mode">The mode.</param>
         /// <param name="padding">The padding.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="key"/> is <c>null</c>.</exception>
         /// <exception cref="ArgumentException">Keysize is not valid for this algorithm.</exception>
         public CastCipher(byte[] key, CipherMode mode, CipherPadding padding)
             : base(key, 8, mode, padding)
@@ -34,8 +40,7 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             if (!(keySize >= 40 && keySize <= 128 && keySize % 8 == 0))
                 throw new ArgumentException(string.Format("KeySize '{0}' is not valid for this algorithm.", keySize));
 
-            //  TODO:   Refactor this algorithm
-            this.SetKey(key);
+            SetKey(key);
         }
 
         /// <summary>
@@ -55,17 +60,17 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             // batch the units up into a 32 bit chunk and go for it
             // the array is in bytes, the increment is 8x8 bits = 64
 
-            uint L0 = BigEndianToUInt32(inputBuffer, inputOffset);
-            uint R0 = BigEndianToUInt32(inputBuffer, inputOffset + 4);
+            var L0 = Pack.BigEndianToUInt32(inputBuffer, inputOffset);
+            var R0 = Pack.BigEndianToUInt32(inputBuffer, inputOffset + 4);
 
-            uint[] result = new uint[2];
+            var result = new uint[2];
             CastEncipher(L0, R0, result);
 
             // now stuff them into the destination block
-            UInt32ToBigEndian(result[0], outputBuffer, outputOffset);
-            UInt32ToBigEndian(result[1], outputBuffer, outputOffset + 4);
+            Pack.UInt32ToBigEndian(result[0], outputBuffer, outputOffset);
+            Pack.UInt32ToBigEndian(result[1], outputBuffer, outputOffset + 4);
 
-            return this.BlockSize;
+            return BlockSize;
         }
 
         /// <summary>
@@ -84,17 +89,17 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             // process the input block
             // batch the units up into a 32 bit chunk and go for it
             // the array is in bytes, the increment is 8x8 bits = 64
-            uint L16 = BigEndianToUInt32(inputBuffer, inputOffset);
-            uint R16 = BigEndianToUInt32(inputBuffer, inputOffset + 4);
+            var L16 = Pack.BigEndianToUInt32(inputBuffer, inputOffset);
+            var R16 = Pack.BigEndianToUInt32(inputBuffer, inputOffset + 4);
 
-            uint[] result = new uint[2];
+            var result = new uint[2];
             CastDecipher(L16, R16, result);
 
             // now stuff them into the destination block
-            UInt32ToBigEndian(result[0], outputBuffer, outputOffset);
-            UInt32ToBigEndian(result[1], outputBuffer, outputOffset + 4);
+            Pack.UInt32ToBigEndian(result[0], outputBuffer, outputOffset);
+            Pack.UInt32ToBigEndian(result[1], outputBuffer, outputOffset + 4);
 
-            return this.BlockSize;
+            return BlockSize;
         }
 
         #region Static Definition Tables
@@ -382,12 +387,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 
         #endregion
 
-        /*
-        * Creates the subkeys using the same nomenclature
-        * as described in RFC2144.
-        *
-        * See section 2.4
-        */
+        /// <summary>
+        /// Sets the subkeys using the same nomenclatureas described in RFC2144.
+        /// </summary>
+        /// <param name="key">The key.</param>
         private void SetKey(byte[] key)
         {
             /*
@@ -401,14 +404,11 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
 
             if (key.Length < 11)
             {
-                this._rounds = RED_ROUNDS;
+                _rounds = RED_ROUNDS;
             }
 
-            int[] z = new int[16];
-            int[] x = new int[16];
-
-            uint z03, z47, z8B, zCF;
-            uint x03, x47, x8B, xCF;
+            var z = new int[16];
+            var x = new int[16];
 
             /* copy the key into x */
             for (int i = 0; i < key.Length; i++)
@@ -421,24 +421,24 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             * bytes from the input key I've already chosen the
             * correct int.
             */
-            x03 = IntsTo32bits(x, 0x0);
-            x47 = IntsTo32bits(x, 0x4);
-            x8B = IntsTo32bits(x, 0x8);
-            xCF = IntsTo32bits(x, 0xC);
+            var x03 = IntsTo32bits(x, 0x0);
+            var x47 = IntsTo32bits(x, 0x4);
+            var x8B = IntsTo32bits(x, 0x8);
+            var xCF = IntsTo32bits(x, 0xC);
 
-            z03 = x03 ^ S5[x[0xD]] ^ S6[x[0xF]] ^ S7[x[0xC]] ^ S8[x[0xE]] ^ S7[x[0x8]];
+            var z03 = x03 ^ S5[x[0xD]] ^ S6[x[0xF]] ^ S7[x[0xC]] ^ S8[x[0xE]] ^ S7[x[0x8]];
 
             Bits32ToInts(z03, z, 0x0);
-            z47 = x8B ^ S5[z[0x0]] ^ S6[z[0x2]] ^ S7[z[0x1]] ^ S8[z[0x3]] ^ S8[x[0xA]];
+            var z47 = x8B ^ S5[z[0x0]] ^ S6[z[0x2]] ^ S7[z[0x1]] ^ S8[z[0x3]] ^ S8[x[0xA]];
             Bits32ToInts(z47, z, 0x4);
-            z8B = xCF ^ S5[z[0x7]] ^ S6[z[0x6]] ^ S7[z[0x5]] ^ S8[z[0x4]] ^ S5[x[0x9]];
+            var z8B = xCF ^ S5[z[0x7]] ^ S6[z[0x6]] ^ S7[z[0x5]] ^ S8[z[0x4]] ^ S5[x[0x9]];
             Bits32ToInts(z8B, z, 0x8);
-            zCF = x47 ^ S5[z[0xA]] ^ S6[z[0x9]] ^ S7[z[0xB]] ^ S8[z[0x8]] ^ S6[x[0xB]];
+            var zCF = x47 ^ S5[z[0xA]] ^ S6[z[0x9]] ^ S7[z[0xB]] ^ S8[z[0x8]] ^ S6[x[0xB]];
             Bits32ToInts(zCF, z, 0xC);
-            this._km[1] = S5[z[0x8]] ^ S6[z[0x9]] ^ S7[z[0x7]] ^ S8[z[0x6]] ^ S5[z[0x2]];
-            this._km[2] = S5[z[0xA]] ^ S6[z[0xB]] ^ S7[z[0x5]] ^ S8[z[0x4]] ^ S6[z[0x6]];
-            this._km[3] = S5[z[0xC]] ^ S6[z[0xD]] ^ S7[z[0x3]] ^ S8[z[0x2]] ^ S7[z[0x9]];
-            this._km[4] = S5[z[0xE]] ^ S6[z[0xF]] ^ S7[z[0x1]] ^ S8[z[0x0]] ^ S8[z[0xC]];
+            _km[1] = S5[z[0x8]] ^ S6[z[0x9]] ^ S7[z[0x7]] ^ S8[z[0x6]] ^ S5[z[0x2]];
+            _km[2] = S5[z[0xA]] ^ S6[z[0xB]] ^ S7[z[0x5]] ^ S8[z[0x4]] ^ S6[z[0x6]];
+            _km[3] = S5[z[0xC]] ^ S6[z[0xD]] ^ S7[z[0x3]] ^ S8[z[0x2]] ^ S7[z[0x9]];
+            _km[4] = S5[z[0xE]] ^ S6[z[0xF]] ^ S7[z[0x1]] ^ S8[z[0x0]] ^ S8[z[0xC]];
 
             z03 = IntsTo32bits(z, 0x0);
             z47 = IntsTo32bits(z, 0x4);
@@ -452,10 +452,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(x8B, x, 0x8);
             xCF = zCF ^ S5[x[0xA]] ^ S6[x[0x9]] ^ S7[x[0xB]] ^ S8[x[0x8]] ^ S6[z[0x3]];
             Bits32ToInts(xCF, x, 0xC);
-            this._km[5] = S5[x[0x3]] ^ S6[x[0x2]] ^ S7[x[0xC]] ^ S8[x[0xD]] ^ S5[x[0x8]];
-            this._km[6] = S5[x[0x1]] ^ S6[x[0x0]] ^ S7[x[0xE]] ^ S8[x[0xF]] ^ S6[x[0xD]];
-            this._km[7] = S5[x[0x7]] ^ S6[x[0x6]] ^ S7[x[0x8]] ^ S8[x[0x9]] ^ S7[x[0x3]];
-            this._km[8] = S5[x[0x5]] ^ S6[x[0x4]] ^ S7[x[0xA]] ^ S8[x[0xB]] ^ S8[x[0x7]];
+            _km[5] = S5[x[0x3]] ^ S6[x[0x2]] ^ S7[x[0xC]] ^ S8[x[0xD]] ^ S5[x[0x8]];
+            _km[6] = S5[x[0x1]] ^ S6[x[0x0]] ^ S7[x[0xE]] ^ S8[x[0xF]] ^ S6[x[0xD]];
+            _km[7] = S5[x[0x7]] ^ S6[x[0x6]] ^ S7[x[0x8]] ^ S8[x[0x9]] ^ S7[x[0x3]];
+            _km[8] = S5[x[0x5]] ^ S6[x[0x4]] ^ S7[x[0xA]] ^ S8[x[0xB]] ^ S8[x[0x7]];
 
             x03 = IntsTo32bits(x, 0x0);
             x47 = IntsTo32bits(x, 0x4);
@@ -469,10 +469,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(z8B, z, 0x8);
             zCF = x47 ^ S5[z[0xA]] ^ S6[z[0x9]] ^ S7[z[0xB]] ^ S8[z[0x8]] ^ S6[x[0xB]];
             Bits32ToInts(zCF, z, 0xC);
-            this._km[9] = S5[z[0x3]] ^ S6[z[0x2]] ^ S7[z[0xC]] ^ S8[z[0xD]] ^ S5[z[0x9]];
-            this._km[10] = S5[z[0x1]] ^ S6[z[0x0]] ^ S7[z[0xE]] ^ S8[z[0xF]] ^ S6[z[0xc]];
-            this._km[11] = S5[z[0x7]] ^ S6[z[0x6]] ^ S7[z[0x8]] ^ S8[z[0x9]] ^ S7[z[0x2]];
-            this._km[12] = S5[z[0x5]] ^ S6[z[0x4]] ^ S7[z[0xA]] ^ S8[z[0xB]] ^ S8[z[0x6]];
+            _km[9] = S5[z[0x3]] ^ S6[z[0x2]] ^ S7[z[0xC]] ^ S8[z[0xD]] ^ S5[z[0x9]];
+            _km[10] = S5[z[0x1]] ^ S6[z[0x0]] ^ S7[z[0xE]] ^ S8[z[0xF]] ^ S6[z[0xc]];
+            _km[11] = S5[z[0x7]] ^ S6[z[0x6]] ^ S7[z[0x8]] ^ S8[z[0x9]] ^ S7[z[0x2]];
+            _km[12] = S5[z[0x5]] ^ S6[z[0x4]] ^ S7[z[0xA]] ^ S8[z[0xB]] ^ S8[z[0x6]];
 
             z03 = IntsTo32bits(z, 0x0);
             z47 = IntsTo32bits(z, 0x4);
@@ -486,10 +486,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(x8B, x, 0x8);
             xCF = zCF ^ S5[x[0xA]] ^ S6[x[0x9]] ^ S7[x[0xB]] ^ S8[x[0x8]] ^ S6[z[0x3]];
             Bits32ToInts(xCF, x, 0xC);
-            this._km[13] = S5[x[0x8]] ^ S6[x[0x9]] ^ S7[x[0x7]] ^ S8[x[0x6]] ^ S5[x[0x3]];
-            this._km[14] = S5[x[0xA]] ^ S6[x[0xB]] ^ S7[x[0x5]] ^ S8[x[0x4]] ^ S6[x[0x7]];
-            this._km[15] = S5[x[0xC]] ^ S6[x[0xD]] ^ S7[x[0x3]] ^ S8[x[0x2]] ^ S7[x[0x8]];
-            this._km[16] = S5[x[0xE]] ^ S6[x[0xF]] ^ S7[x[0x1]] ^ S8[x[0x0]] ^ S8[x[0xD]];
+            _km[13] = S5[x[0x8]] ^ S6[x[0x9]] ^ S7[x[0x7]] ^ S8[x[0x6]] ^ S5[x[0x3]];
+            _km[14] = S5[x[0xA]] ^ S6[x[0xB]] ^ S7[x[0x5]] ^ S8[x[0x4]] ^ S6[x[0x7]];
+            _km[15] = S5[x[0xC]] ^ S6[x[0xD]] ^ S7[x[0x3]] ^ S8[x[0x2]] ^ S7[x[0x8]];
+            _km[16] = S5[x[0xE]] ^ S6[x[0xF]] ^ S7[x[0x1]] ^ S8[x[0x0]] ^ S8[x[0xD]];
 
             x03 = IntsTo32bits(x, 0x0);
             x47 = IntsTo32bits(x, 0x4);
@@ -503,10 +503,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(z8B, z, 0x8);
             zCF = x47 ^ S5[z[0xA]] ^ S6[z[0x9]] ^ S7[z[0xB]] ^ S8[z[0x8]] ^ S6[x[0xB]];
             Bits32ToInts(zCF, z, 0xC);
-            this._kr[1] = (int)((S5[z[0x8]] ^ S6[z[0x9]] ^ S7[z[0x7]] ^ S8[z[0x6]] ^ S5[z[0x2]]) & 0x1f);
-            this._kr[2] = (int)((S5[z[0xA]] ^ S6[z[0xB]] ^ S7[z[0x5]] ^ S8[z[0x4]] ^ S6[z[0x6]]) & 0x1f);
-            this._kr[3] = (int)((S5[z[0xC]] ^ S6[z[0xD]] ^ S7[z[0x3]] ^ S8[z[0x2]] ^ S7[z[0x9]]) & 0x1f);
-            this._kr[4] = (int)((S5[z[0xE]] ^ S6[z[0xF]] ^ S7[z[0x1]] ^ S8[z[0x0]] ^ S8[z[0xC]]) & 0x1f);
+            _kr[1] = (int)((S5[z[0x8]] ^ S6[z[0x9]] ^ S7[z[0x7]] ^ S8[z[0x6]] ^ S5[z[0x2]]) & 0x1f);
+            _kr[2] = (int)((S5[z[0xA]] ^ S6[z[0xB]] ^ S7[z[0x5]] ^ S8[z[0x4]] ^ S6[z[0x6]]) & 0x1f);
+            _kr[3] = (int)((S5[z[0xC]] ^ S6[z[0xD]] ^ S7[z[0x3]] ^ S8[z[0x2]] ^ S7[z[0x9]]) & 0x1f);
+            _kr[4] = (int)((S5[z[0xE]] ^ S6[z[0xF]] ^ S7[z[0x1]] ^ S8[z[0x0]] ^ S8[z[0xC]]) & 0x1f);
 
             z03 = IntsTo32bits(z, 0x0);
             z47 = IntsTo32bits(z, 0x4);
@@ -520,10 +520,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(x8B, x, 0x8);
             xCF = zCF ^ S5[x[0xA]] ^ S6[x[0x9]] ^ S7[x[0xB]] ^ S8[x[0x8]] ^ S6[z[0x3]];
             Bits32ToInts(xCF, x, 0xC);
-            this._kr[5] = (int)((S5[x[0x3]] ^ S6[x[0x2]] ^ S7[x[0xC]] ^ S8[x[0xD]] ^ S5[x[0x8]]) & 0x1f);
-            this._kr[6] = (int)((S5[x[0x1]] ^ S6[x[0x0]] ^ S7[x[0xE]] ^ S8[x[0xF]] ^ S6[x[0xD]]) & 0x1f);
-            this._kr[7] = (int)((S5[x[0x7]] ^ S6[x[0x6]] ^ S7[x[0x8]] ^ S8[x[0x9]] ^ S7[x[0x3]]) & 0x1f);
-            this._kr[8] = (int)((S5[x[0x5]] ^ S6[x[0x4]] ^ S7[x[0xA]] ^ S8[x[0xB]] ^ S8[x[0x7]]) & 0x1f);
+            _kr[5] = (int)((S5[x[0x3]] ^ S6[x[0x2]] ^ S7[x[0xC]] ^ S8[x[0xD]] ^ S5[x[0x8]]) & 0x1f);
+            _kr[6] = (int)((S5[x[0x1]] ^ S6[x[0x0]] ^ S7[x[0xE]] ^ S8[x[0xF]] ^ S6[x[0xD]]) & 0x1f);
+            _kr[7] = (int)((S5[x[0x7]] ^ S6[x[0x6]] ^ S7[x[0x8]] ^ S8[x[0x9]] ^ S7[x[0x3]]) & 0x1f);
+            _kr[8] = (int)((S5[x[0x5]] ^ S6[x[0x4]] ^ S7[x[0xA]] ^ S8[x[0xB]] ^ S8[x[0x7]]) & 0x1f);
 
             x03 = IntsTo32bits(x, 0x0);
             x47 = IntsTo32bits(x, 0x4);
@@ -537,10 +537,10 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(z8B, z, 0x8);
             zCF = x47 ^ S5[z[0xA]] ^ S6[z[0x9]] ^ S7[z[0xB]] ^ S8[z[0x8]] ^ S6[x[0xB]];
             Bits32ToInts(zCF, z, 0xC);
-            this._kr[9] = (int)((S5[z[0x3]] ^ S6[z[0x2]] ^ S7[z[0xC]] ^ S8[z[0xD]] ^ S5[z[0x9]]) & 0x1f);
-            this._kr[10] = (int)((S5[z[0x1]] ^ S6[z[0x0]] ^ S7[z[0xE]] ^ S8[z[0xF]] ^ S6[z[0xc]]) & 0x1f);
-            this._kr[11] = (int)((S5[z[0x7]] ^ S6[z[0x6]] ^ S7[z[0x8]] ^ S8[z[0x9]] ^ S7[z[0x2]]) & 0x1f);
-            this._kr[12] = (int)((S5[z[0x5]] ^ S6[z[0x4]] ^ S7[z[0xA]] ^ S8[z[0xB]] ^ S8[z[0x6]]) & 0x1f);
+            _kr[9] = (int)((S5[z[0x3]] ^ S6[z[0x2]] ^ S7[z[0xC]] ^ S8[z[0xD]] ^ S5[z[0x9]]) & 0x1f);
+            _kr[10] = (int)((S5[z[0x1]] ^ S6[z[0x0]] ^ S7[z[0xE]] ^ S8[z[0xF]] ^ S6[z[0xc]]) & 0x1f);
+            _kr[11] = (int)((S5[z[0x7]] ^ S6[z[0x6]] ^ S7[z[0x8]] ^ S8[z[0x9]] ^ S7[z[0x2]]) & 0x1f);
+            _kr[12] = (int)((S5[z[0x5]] ^ S6[z[0x4]] ^ S7[z[0xA]] ^ S8[z[0xB]] ^ S8[z[0x6]]) & 0x1f);
 
             z03 = IntsTo32bits(z, 0x0);
             z47 = IntsTo32bits(z, 0x4);
@@ -554,21 +554,19 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             Bits32ToInts(x8B, x, 0x8);
             xCF = zCF ^ S5[x[0xA]] ^ S6[x[0x9]] ^ S7[x[0xB]] ^ S8[x[0x8]] ^ S6[z[0x3]];
             Bits32ToInts(xCF, x, 0xC);
-            this._kr[13] = (int)((S5[x[0x8]] ^ S6[x[0x9]] ^ S7[x[0x7]] ^ S8[x[0x6]] ^ S5[x[0x3]]) & 0x1f);
-            this._kr[14] = (int)((S5[x[0xA]] ^ S6[x[0xB]] ^ S7[x[0x5]] ^ S8[x[0x4]] ^ S6[x[0x7]]) & 0x1f);
-            this._kr[15] = (int)((S5[x[0xC]] ^ S6[x[0xD]] ^ S7[x[0x3]] ^ S8[x[0x2]] ^ S7[x[0x8]]) & 0x1f);
-            this._kr[16] = (int)((S5[x[0xE]] ^ S6[x[0xF]] ^ S7[x[0x1]] ^ S8[x[0x0]] ^ S8[x[0xD]]) & 0x1f);
+            _kr[13] = (int)((S5[x[0x8]] ^ S6[x[0x9]] ^ S7[x[0x7]] ^ S8[x[0x6]] ^ S5[x[0x3]]) & 0x1f);
+            _kr[14] = (int)((S5[x[0xA]] ^ S6[x[0xB]] ^ S7[x[0x5]] ^ S8[x[0x4]] ^ S6[x[0x7]]) & 0x1f);
+            _kr[15] = (int)((S5[x[0xC]] ^ S6[x[0xD]] ^ S7[x[0x3]] ^ S8[x[0x2]] ^ S7[x[0x8]]) & 0x1f);
+            _kr[16] = (int)((S5[x[0xE]] ^ S6[x[0xF]] ^ S7[x[0x1]] ^ S8[x[0x0]] ^ S8[x[0xD]]) & 0x1f);
         }
 
-        /**
-        * The first of the three processing functions for the
-        * encryption and decryption.
-        *
-        * @param D            the input to be processed
-        * @param Kmi        the mask to be used from Km[n]
-        * @param Kri        the rotation value to be used
-        *
-        */
+        /// <summary>
+        /// The first of the three processing functions for the encryption and decryption.
+        /// </summary>
+        /// <param name="D">The input to be processed.</param>
+        /// <param name="Kmi">The mask to be used from Km[n].</param>
+        /// <param name="Kri">The rotation value to be used.</param>
+        /// <returns></returns>
         private static uint F1(uint D, uint Kmi, int Kri)
         {
             uint I = Kmi + D;
@@ -576,15 +574,13 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             return ((S1[(I >> 24) & 0xff] ^ S2[(I >> 16) & 0xff]) - S3[(I >> 8) & 0xff]) + S4[I & 0xff];
         }
 
-        /**
-        * The second of the three processing functions for the
-        * encryption and decryption.
-        *
-        * @param D            the input to be processed
-        * @param Kmi        the mask to be used from Km[n]
-        * @param Kri        the rotation value to be used
-        *
-        */
+        /// <summary>
+        /// The second of the three processing functions for the encryption and decryption.
+        /// </summary>
+        /// <param name="D">The input to be processed.</param>
+        /// <param name="Kmi">The mask to be used from Km[n].</param>
+        /// <param name="Kri">The rotation value to be used.</param>
+        /// <returns></returns>
         private static uint F2(uint D, uint Kmi, int Kri)
         {
             uint I = Kmi ^ D;
@@ -592,15 +588,13 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             return ((S1[(I >> 24) & 0xff] - S2[(I >> 16) & 0xff]) + S3[(I >> 8) & 0xff]) ^ S4[I & 0xff];
         }
 
-        /**
-        * The third of the three processing functions for the
-        * encryption and decryption.
-        *
-        * @param D            the input to be processed
-        * @param Kmi        the mask to be used from Km[n]
-        * @param Kri        the rotation value to be used
-        *
-        */
+        /// <summary>
+        /// The third of the three processing functions for the encryption and decryption.
+        /// </summary>
+        /// <param name="D">The input to be processed.</param>
+        /// <param name="Kmi">The mask to be used from Km[n].</param>
+        /// <param name="Kri">The rotation value to be used.</param>
+        /// <returns></returns>
         private static uint F3(uint D, uint Kmi, int Kri)
         {
             uint I = Kmi - D;
@@ -608,16 +602,16 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             return ((S1[(I >> 24) & 0xff] + S2[(I >> 16) & 0xff]) ^ S3[(I >> 8) & 0xff]) - S4[I & 0xff];
         }
 
-        /**
-        * Does the 16 rounds to encrypt the block.
-        *
-        * @param L0    the LH-32bits of the plaintext block
-        * @param R0    the RH-32bits of the plaintext block
-        */
+        /// <summary>
+        /// Does the 16 rounds to encrypt the block.
+        /// </summary>
+        /// <param name="L0">The LH-32bits of the plaintext block.</param>
+        /// <param name="R0">The RH-32bits of the plaintext block.</param>
+        /// <param name="result">The result.</param>
         private void CastEncipher(uint L0, uint R0, uint[] result)
         {
-            uint Lp = L0;        // the previous value, equiv to L[i-1]
-            uint Rp = R0;        // equivalent to R[i-1]
+            var Lp = L0;        // the previous value, equiv to L[i-1]
+            var Rp = R0;        // equivalent to R[i-1]
 
             /*
             * numbering consistent with paper to make
@@ -625,7 +619,7 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             */
             uint Li = L0, Ri = R0;
 
-            for (int i = 1; i <= this._rounds; i++)
+            for (int i = 1; i <= _rounds; i++)
             {
                 Lp = Li;
                 Rp = Ri;
@@ -639,29 +633,27 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
                     case 10:
                     case 13:
                     case 16:
-                        Ri = Lp ^ F1(Rp, this._km[i], this._kr[i]);
+                        Ri = Lp ^ F1(Rp, _km[i], _kr[i]);
                         break;
                     case 2:
                     case 5:
                     case 8:
                     case 11:
                     case 14:
-                        Ri = Lp ^ F2(Rp, this._km[i], this._kr[i]);
+                        Ri = Lp ^ F2(Rp, _km[i], _kr[i]);
                         break;
                     case 3:
                     case 6:
                     case 9:
                     case 12:
                     case 15:
-                        Ri = Lp ^ F3(Rp, this._km[i], this._kr[i]);
+                        Ri = Lp ^ F3(Rp, _km[i], _kr[i]);
                         break;
                 }
             }
 
             result[0] = Ri;
             result[1] = Li;
-
-            return;
         }
 
         private void CastDecipher(uint L16, uint R16, uint[] result)
@@ -675,7 +667,7 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
             */
             uint Li = L16, Ri = R16;
 
-            for (int i = this._rounds; i > 0; i--)
+            for (int i = _rounds; i > 0; i--)
             {
                 Lp = Li;
                 Rp = Ri;
@@ -689,29 +681,27 @@ namespace Renci.SshNet.Security.Cryptography.Ciphers
                     case 10:
                     case 13:
                     case 16:
-                        Ri = Lp ^ F1(Rp, this._km[i], this._kr[i]);
+                        Ri = Lp ^ F1(Rp, _km[i], _kr[i]);
                         break;
                     case 2:
                     case 5:
                     case 8:
                     case 11:
                     case 14:
-                        Ri = Lp ^ F2(Rp, this._km[i], this._kr[i]);
+                        Ri = Lp ^ F2(Rp, _km[i], _kr[i]);
                         break;
                     case 3:
                     case 6:
                     case 9:
                     case 12:
                     case 15:
-                        Ri = Lp ^ F3(Rp, this._km[i], this._kr[i]);
+                        Ri = Lp ^ F3(Rp, _km[i], _kr[i]);
                         break;
                 }
             }
 
             result[0] = Ri;
             result[1] = Li;
-
-            return;
         }
 
         private static void Bits32ToInts(uint inData, int[] b, int offset)

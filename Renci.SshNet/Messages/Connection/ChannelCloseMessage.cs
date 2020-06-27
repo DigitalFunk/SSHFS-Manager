@@ -19,8 +19,13 @@
         /// </summary>
         /// <param name="localChannelNumber">The local channel number.</param>
         public ChannelCloseMessage(uint localChannelNumber)
+            : base(localChannelNumber)
         {
-            LocalChannelNumber = localChannelNumber;
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnChannelCloseReceived(this);
         }
     }
 }

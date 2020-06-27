@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Renci.SshNet.Security
 {
@@ -25,14 +22,14 @@ namespace Renci.SshNet.Security
         public CertificateHostAlgorithm(string name)
             : base(name)
         {
-
         }
 
         /// <summary>
         /// Signs the specified data.
         /// </summary>
         /// <param name="data">The data.</param>
-        /// <returns></returns>
+        /// <returns>Signed data.</returns>
+        /// <exception cref="NotImplementedException"></exception>
         public override byte[] Sign(byte[] data)
         {
             throw new NotImplementedException();
@@ -43,11 +40,11 @@ namespace Renci.SshNet.Security
         /// </summary>
         /// <param name="data">The data.</param>
         /// <param name="signature">The signature.</param>
-        /// <returns></returns>
+        /// <returns><c>true</c> if signature was successfully verified; otherwise <c>false</c>.</returns>
+        /// <exception cref="NotImplementedException"></exception>
         public override bool VerifySignature(byte[] data, byte[] signature)
         {
             throw new NotImplementedException();
         }
-
     }
 }

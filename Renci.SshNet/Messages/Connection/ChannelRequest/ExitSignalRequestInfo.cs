@@ -1,15 +1,18 @@
-﻿using System.Text;
-namespace Renci.SshNet.Messages.Connection
+﻿namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Represents "exit-signal" type channel request information
     /// </summary>
     internal class ExitSignalRequestInfo : RequestInfo
     {
+        private byte[] _signalName;
+        private byte[] _errorMessage;
+        private byte[] _language;
+
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string NAME = "exit-signal";
+        public const string Name = "exit-signal";
 
         /// <summary>
         /// Gets the name of the request.
@@ -19,7 +22,7 @@ namespace Renci.SshNet.Messages.Connection
         /// </value>
         public override string RequestName
         {
-            get { return ExitSignalRequestInfo.NAME; }
+            get { return Name; }
         }
 
         /// <summary>
@@ -28,7 +31,11 @@ namespace Renci.SshNet.Messages.Connection
         /// <value>
         /// The name of the signal.
         /// </value>
-        public string SignalName { get; private set; }
+        public string SignalName
+        {
+            get { return Ascii.GetString(_signalName, 0, _signalName.Length); }
+            private set { _signalName = Ascii.GetBytes(value); }
+        }
 
         /// <summary>
         /// Gets a value indicating whether core is dumped.
@@ -41,19 +48,43 @@ namespace Renci.SshNet.Messages.Connection
         /// <summary>
         /// Gets the error message.
         /// </summary>
-        public string ErrorMessage { get; private set; }
+        public string ErrorMessage
+        {
+            get { return Utf8.GetString(_errorMessage, 0, _errorMessage.Length); }
+            private set { _errorMessage = Utf8.GetBytes(value); }
+        }
 
         /// <summary>
         /// Gets message language.
         /// </summary>
-        public string Language { get; private set; }
+        public string Language
+        {
+            get { return Utf8.GetString(_language, 0, _language.Length); }
+            private set { _language = Utf8.GetBytes(value); }
+        }
+
+        protected override int BufferCapacity
+        {
+            get
+            {
+                var capacity = base.BufferCapacity;
+                capacity += 4; // SignalName length
+                capacity += _signalName.Length; // SignalName
+                capacity += 1; // CoreDumped
+                capacity += 4; // ErrorMessage length
+                capacity += _errorMessage.Length; // ErrorMessage
+                capacity += 4; // Language length
+                capacity += _language.Length; // Language
+                return capacity;
+            }
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExitSignalRequestInfo"/> class.
         /// </summary>
         public ExitSignalRequestInfo()
         {
-            this.WantReply = false;
+            WantReply = false;
         }
 
         /// <summary>
@@ -66,10 +97,10 @@ namespace Renci.SshNet.Messages.Connection
         public ExitSignalRequestInfo(string signalName, bool coreDumped, string errorMessage, string language)
             : this()
         {
-            this.SignalName = signalName;
-            this.CoreDumped = coreDumped;
-            this.ErrorMessage = errorMessage;
-            this.Language = language;
+            SignalName = signalName;
+            CoreDumped = coreDumped;
+            ErrorMessage = errorMessage;
+            Language = language;
         }
 
         /// <summary>
@@ -79,10 +110,10 @@ namespace Renci.SshNet.Messages.Connection
         {
             base.LoadData();
 
-            this.SignalName = this.ReadString();
-            this.CoreDumped = this.ReadBoolean();
-            this.ErrorMessage = this.ReadString();
-            this.Language = this.ReadString();
+            _signalName = ReadBinary();
+            CoreDumped = ReadBoolean();
+            _errorMessage = ReadBinary();
+            _language = ReadBinary();
         }
 
         /// <summary>
@@ -92,11 +123,10 @@ namespace Renci.SshNet.Messages.Connection
         {
             base.SaveData();
 
-            this.Write(this.SignalName);
-            this.Write(this.CoreDumped);
-            this.Write(this.ErrorMessage);
-            this.Write(this.Language, Encoding.UTF8);
+            WriteBinaryString(_signalName);
+            Write(CoreDumped);
+            Write(_errorMessage);
+            Write(_language);
         }
-
     }
 }

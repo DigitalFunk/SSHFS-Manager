@@ -1,23 +1,15 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Security.Cryptography;
 using Renci.SshNet.Messages.Transport;
-using System.Diagnostics;
-using Renci.SshNet.Messages;
 using Renci.SshNet.Common;
-using Renci.SshNet.Security.Cryptography;
 
 namespace Renci.SshNet.Security
 {
     /// <summary>
     /// Represents base class for Diffie Hellman key exchange algorithm
     /// </summary>
-    public abstract class KeyExchangeDiffieHellman : KeyExchange
+    internal abstract class KeyExchangeDiffieHellman : KeyExchange
     {
-        private static RNGCryptoServiceProvider _randomizer = new System.Security.Cryptography.RNGCryptoServiceProvider();
-
         /// <summary>
         /// Specifies key exchange group number.
         /// </summary>
@@ -51,7 +43,7 @@ namespace Renci.SshNet.Security
         /// <summary>
         /// Specifies random generated number.
         /// </summary>
-        protected BigInteger _randomValue;
+        protected BigInteger _privateExponent;
 
         /// <summary>
         /// Specifies host key data.
@@ -64,6 +56,14 @@ namespace Renci.SshNet.Security
         protected byte[] _signature;
 
         /// <summary>
+        /// Gets the size, in bits, of the computed hash code.
+        /// </summary>
+        /// <value>
+        /// The size, in bits, of the computed hash code.
+        /// </value>
+        protected abstract int HashSize { get; }
+
+        /// <summary>
         /// Validates the exchange hash.
         /// </summary>
         /// <returns>
@@ -71,15 +71,19 @@ namespace Renci.SshNet.Security
         /// </returns>
         protected override bool ValidateExchangeHash()
         {
-            var exchangeHash = this.CalculateHash();
+            var exchangeHash = CalculateHash();
 
-            var length = (uint)(this._hostKey[0] << 24 | this._hostKey[1] << 16 | this._hostKey[2] << 8 | this._hostKey[3]);
+            var length = Pack.BigEndianToUInt32(_hostKey);
+            var algorithmName = Encoding.UTF8.GetString(_hostKey, 4, (int)length);
+            var key = Session.ConnectionInfo.HostKeyAlgorithms[algorithmName](_hostKey);
 
-            var algorithmName = Encoding.UTF8.GetString(this._hostKey, 4, (int)length);
+            Session.ConnectionInfo.CurrentHostKeyAlgorithm = algorithmName;
 
-            var key = this.Session.ConnectionInfo.HostKeyAlgorithms[algorithmName](this._hostKey);
-
-            return key.VerifySignature(exchangeHash, this._signature);
+            if (CanTrustHostKey(key))
+            {
+                return key.VerifySignature(exchangeHash, _signature);
+            }
+            return false;
         }
 
         /// <summary>
@@ -91,8 +95,8 @@ namespace Renci.SshNet.Security
         {
             base.Start(session, message);
 
-            this._serverPayload = message.GetBytes().ToArray();
-            this._clientPayload = this.Session.ClientInitMessage.GetBytes().ToArray();
+            _serverPayload = message.GetBytes();
+            _clientPayload = Session.ClientInitMessage.GetBytes();
         }
 
         /// <summary>
@@ -100,24 +104,23 @@ namespace Renci.SshNet.Security
         /// </summary>
         protected void PopulateClientExchangeValue()
         {
-            if (this._group.IsZero)
+            if (_group.IsZero)
                 throw new ArgumentNullException("_group");
 
-            if (this._prime.IsZero)
+            if (_prime.IsZero)
                 throw new ArgumentNullException("_prime");
 
-            var bitLength = this._prime.BitLength;
-
-            var bytesArray = new byte[bitLength / 8 + (((bitLength % 8) > 0) ? 1 : 0)];
+            // generate private exponent that is twice the hash size (RFC 4419) with a minimum
+            // of 1024 bits (whatever is less)
+            var privateExponentSize = Math.Max(HashSize * 2, 1024);
 
             do
             {
-                _randomizer.GetBytes(bytesArray);
-                bytesArray[bytesArray.Length - 1] = (byte)(bytesArray[bytesArray.Length - 1] & 0x7F);   //  Ensure not a negative value
-                this._randomValue = new BigInteger(bytesArray);
-                this._clientExchangeValue = BigInteger.ModPow(this._group, this._randomValue, this._prime);
-
-            } while (this._clientExchangeValue < 1 || this._clientExchangeValue > ((this._prime - 1)));
+                // create private component
+                _privateExponent = BigInteger.Random(privateExponentSize);
+                // generate public component
+                _clientExchangeValue = BigInteger.ModPow(_group, _privateExponent, _prime);
+            } while (_clientExchangeValue < 1 || _clientExchangeValue > (_prime - 1));
         }
 
         /// <summary>
@@ -128,10 +131,10 @@ namespace Renci.SshNet.Security
         /// <param name="signature">The signature.</param>
         protected virtual void HandleServerDhReply(byte[] hostKey, BigInteger serverExchangeValue, byte[] signature)
         {
-            this._serverExchangeValue = serverExchangeValue;
-            this._hostKey = hostKey;
-            this.SharedKey = BigInteger.ModPow(serverExchangeValue, this._randomValue, this._prime);
-            this._signature = signature;
+            _serverExchangeValue = serverExchangeValue;
+            _hostKey = hostKey;
+            SharedKey = BigInteger.ModPow(serverExchangeValue, _privateExponent, _prime);
+            _signature = signature;
         }
     }
 }

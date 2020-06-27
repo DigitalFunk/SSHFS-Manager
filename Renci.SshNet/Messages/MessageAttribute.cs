@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Messages
 {
@@ -36,8 +32,8 @@ namespace Renci.SshNet.Messages
         /// <param name="number">The number.</param>
         public MessageAttribute(string name, byte number)
         {
-            this.Name = name;
-            this.Number = number;
+            Name = name;
+            Number = number;
         }
     }
 }

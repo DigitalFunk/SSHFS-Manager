@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Renci.SshNet.Messages.Connection
+﻿namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Represents "keepalive@openssh.com" type channel request information
@@ -13,7 +8,7 @@ namespace Renci.SshNet.Messages.Connection
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string NAME = "keepalive@openssh.com";
+        public const string Name = "keepalive@openssh.com";
 
         /// <summary>
         /// Gets the name of the request.
@@ -23,7 +18,7 @@ namespace Renci.SshNet.Messages.Connection
         /// </value>
         public override string RequestName
         {
-            get { return KeepAliveRequestInfo.NAME; }
+            get { return Name; }
         }
 
         /// <summary>
@@ -31,7 +26,7 @@ namespace Renci.SshNet.Messages.Connection
         /// </summary>
         public KeepAliveRequestInfo()
         {
-            this.WantReply = false;
+            WantReply = false;
         }
     }
 }

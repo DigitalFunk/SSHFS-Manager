@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Sftp
@@ -33,7 +31,7 @@ namespace Renci.SshNet.Sftp
         /// <param name="filesRead">The files read.</param>
         internal void Update(int filesRead)
         {
-            this.FilesRead = filesRead;
+            FilesRead = filesRead;
         }
     }
 }

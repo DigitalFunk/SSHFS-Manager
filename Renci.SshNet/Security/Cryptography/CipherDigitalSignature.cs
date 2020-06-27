@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Security.Cryptography;
 using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Security.Cryptography
@@ -12,22 +8,21 @@ namespace Renci.SshNet.Security.Cryptography
     /// </summary>
     public abstract class CipherDigitalSignature : DigitalSignature
     {
-        private AsymmetricCipher _cipher;
-
-        private ObjectIdentifier _oid;
+        private readonly AsymmetricCipher _cipher;
+        private readonly ObjectIdentifier _oid;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CipherDigitalSignature"/> class.
         /// </summary>
         /// <param name="oid">The object identifier.</param>
         /// <param name="cipher">The cipher.</param>
-        public CipherDigitalSignature(ObjectIdentifier oid, AsymmetricCipher cipher)
+        protected CipherDigitalSignature(ObjectIdentifier oid, AsymmetricCipher cipher)
         {
             if (cipher == null)
                 throw new ArgumentNullException("cipher");
 
-            this._cipher = cipher;
-            this._oid = oid;
+            _cipher = cipher;
+            _oid = oid;
         }
 
         /// <summary>
@@ -35,42 +30,40 @@ namespace Renci.SshNet.Security.Cryptography
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="signature">The signature.</param>
-        /// <returns></returns>
+        /// <returns>
+        ///   <c>True</c> if signature was successfully verified; otherwise <c>false</c>.
+        /// </returns>
         public override bool Verify(byte[] input, byte[] signature)
         {
-            var encryptedSignature = this._cipher.Decrypt(signature);
-
-            var hashData = this.Hash(input);
-
+            var encryptedSignature = _cipher.Decrypt(signature);
+            var hashData = Hash(input);
             var expected = DerEncode(hashData);
-
-            if (expected.SequenceEqual(encryptedSignature))
-                return true;
-            else
-                return false;
+            return expected.IsEqualTo(encryptedSignature);
         }
 
         /// <summary>
         /// Creates the signature.
         /// </summary>
         /// <param name="input">The input.</param>
-        /// <returns></returns>
+        /// <returns>
+        /// Signed input data.
+        /// </returns>
         public override byte[] Sign(byte[] input)
         {
             //  Calculate hash value
-            var hashData = this.Hash(input);
+            var hashData = Hash(input);
 
             //  Calculate DER string
             var derEncodedHash = DerEncode(hashData);
 
-            return this._cipher.Encrypt(derEncodedHash).TrimLeadingZero().ToArray();
+            return _cipher.Encrypt(derEncodedHash).TrimLeadingZeros();
         }
 
         /// <summary>
         /// Hashes the specified input.
         /// </summary>
         /// <param name="input">The input.</param>
-        /// <returns></returns>
+        /// <returns>Hashed data.</returns>
         protected abstract byte[] Hash(byte[] input);
 
         /// <summary>
@@ -80,15 +73,13 @@ namespace Renci.SshNet.Security.Cryptography
         /// <returns>DER Encoded byte array</returns>
         protected byte[] DerEncode(byte[] hashData)
         {
-            var data = new DerData();
-
             var alg = new DerData();
-            alg.Write(this._oid);
+            alg.Write(_oid);
             alg.WriteNull();
 
+            var data = new DerData();
             data.Write(alg);
             data.Write(hashData);
-
             return data.Encode();
         }
     }

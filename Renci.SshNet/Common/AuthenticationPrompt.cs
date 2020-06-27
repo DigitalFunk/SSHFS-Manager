@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Renci.SshNet.Common
+﻿namespace Renci.SshNet.Common
 {
     /// <summary>
     /// Provides prompt information when <see cref="Renci.SshNet.KeyboardInteractiveConnectionInfo.AuthenticationPrompt"/> is raised
@@ -44,9 +39,9 @@ namespace Renci.SshNet.Common
         /// <param name="request">The request.</param>
         public AuthenticationPrompt(int id, bool isEchoed, string request)
         {
-            this.Id = id;
-            this.IsEchoed = isEchoed;
-            this.Request = request;
+            Id = id;
+            IsEchoed = isEchoed;
+            Request = request;
         }
     }
 }

@@ -19,8 +19,13 @@
         /// </summary>
         /// <param name="localChannelNumber">The local channel number.</param>
         public ChannelFailureMessage(uint localChannelNumber)
+            : base(localChannelNumber)
         {
-            this.LocalChannelNumber = localChannelNumber;
+        }
+
+        internal override void Process(Session session)
+        {
+            session.OnChannelFailureReceived(this);
         }
     }
 }

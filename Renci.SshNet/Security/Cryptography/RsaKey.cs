@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using Renci.SshNet.Common;
 using Renci.SshNet.Security.Cryptography;
 
@@ -19,7 +16,7 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                return this._privateKey[0];
+                return _privateKey[0];
             }
         }
 
@@ -30,7 +27,7 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                return this._privateKey[1];
+                return _privateKey[1];
             }
         }
 
@@ -41,10 +38,9 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._privateKey.Length > 2)
-                    return this._privateKey[2];
-                else
-                    return BigInteger.Zero;
+                if (_privateKey.Length > 2)
+                    return _privateKey[2];
+                return BigInteger.Zero;
             }
         }
 
@@ -55,10 +51,9 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._privateKey.Length > 3)
-                    return this._privateKey[3];
-                else
-                    return BigInteger.Zero;
+                if (_privateKey.Length > 3)
+                    return _privateKey[3];
+                return BigInteger.Zero;
             }
         }
 
@@ -69,10 +64,9 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._privateKey.Length > 4)
-                    return this._privateKey[4];
-                else
-                    return BigInteger.Zero;
+                if (_privateKey.Length > 4)
+                    return _privateKey[4];
+                return BigInteger.Zero;
             }
         }
 
@@ -83,10 +77,9 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._privateKey.Length > 5)
-                    return this._privateKey[5];
-                else
-                    return BigInteger.Zero;
+                if (_privateKey.Length > 5)
+                    return _privateKey[5];
+                return BigInteger.Zero;
             }
         }
 
@@ -97,10 +90,9 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._privateKey.Length > 6)
-                    return this._privateKey[6];
-                else
-                    return BigInteger.Zero;
+                if (_privateKey.Length > 6)
+                    return _privateKey[6];
+                return BigInteger.Zero;
             }
         }
 
@@ -111,10 +103,23 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._privateKey.Length > 7)
-                    return this._privateKey[7];
-                else
-                    return BigInteger.Zero;
+                if (_privateKey.Length > 7)
+                    return _privateKey[7];
+                return BigInteger.Zero;
+            }
+        }
+
+        /// <summary>
+        /// Gets the length of the key.
+        /// </summary>
+        /// <value>
+        /// The length of the key.
+        /// </value>
+        public override int KeyLength
+        {
+            get
+            {
+                return Modulus.BitLength;
             }
         }
 
@@ -126,11 +131,11 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                if (this._digitalSignature == null)
+                if (_digitalSignature == null)
                 {
-                    this._digitalSignature = new RsaDigitalSignature(this);
+                    _digitalSignature = new RsaDigitalSignature(this);
                 }
-                return this._digitalSignature;
+                return _digitalSignature;
             }
         }
 
@@ -144,14 +149,14 @@ namespace Renci.SshNet.Security
         {
             get
             {
-                return new BigInteger[] { this.Exponent, this.Modulus };
+                return new[] { Exponent, Modulus };
             }
             set
             {
                 if (value.Length != 2)
                     throw new InvalidOperationException("Invalid private key.");
 
-                this._privateKey = new BigInteger[] { value[1], value[0] };
+                _privateKey = new[] { value[1], value[0] };
             }
         }
 
@@ -170,59 +175,79 @@ namespace Renci.SshNet.Security
         public RsaKey(byte[] data)
             : base(data)
         {
-            if (this._privateKey.Length != 8)
+            if (_privateKey.Length != 8)
                 throw new InvalidOperationException("Invalid private key.");
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RsaKey"/> class.
+        /// </summary>
+        /// <param name="modulus">The modulus.</param>
+        /// <param name="exponent">The exponent.</param>
+        /// <param name="d">The d.</param>
+        /// <param name="p">The p.</param>
+        /// <param name="q">The q.</param>
+        /// <param name="inverseQ">The inverse Q.</param>
+        public RsaKey(BigInteger modulus, BigInteger exponent, BigInteger d, BigInteger p, BigInteger q, BigInteger inverseQ)
+        {
+            _privateKey = new BigInteger[8];
+            _privateKey[0] = modulus;
+            _privateKey[1] = exponent;
+            _privateKey[2] = d;
+            _privateKey[3] = p;
+            _privateKey[4] = q;
+            _privateKey[5] = PrimeExponent(d, p);
+            _privateKey[6] = PrimeExponent(d, q);
+            _privateKey[7] = inverseQ;
+        }
+
+        private static BigInteger PrimeExponent(BigInteger privateExponent, BigInteger prime)
+        {
+            BigInteger pe = prime - new BigInteger(1);
+            return privateExponent % pe;
         }
 
         #region IDisposable Members
 
-        private bool _isDisposed = false;
+        private bool _isDisposed;
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged ResourceMessages.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
         {
             Dispose(true);
-
             GC.SuppressFinalize(this);
         }
 
         /// <summary>
         /// Releases unmanaged and - optionally - managed resources
         /// </summary>
-        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged ResourceMessages.</param>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
         protected virtual void Dispose(bool disposing)
         {
-            // Check to see if Dispose has already been called.
-            if (!this._isDisposed)
+            if (_isDisposed)
+                return;
+
+            if (disposing)
             {
-                // If disposing equals true, dispose all managed
-                // and unmanaged ResourceMessages.
-                if (disposing)
+                var digitalSignature = _digitalSignature;
+                if (digitalSignature != null)
                 {
-                    // Dispose managed ResourceMessages.
-                    if (this._digitalSignature != null)
-                    {
-                        this._digitalSignature.Dispose();
-                        this._digitalSignature = null;
-                    }
+                    digitalSignature.Dispose();
+                    _digitalSignature = null;
                 }
 
-                // Note disposing has been done.
-                this._isDisposed = true;
+                _isDisposed = true;
             }
         }
 
         /// <summary>
         /// Releases unmanaged resources and performs other cleanup operations before the
-        /// <see cref="SshCommand"/> is reclaimed by garbage collection.
+        /// <see cref="RsaKey"/> is reclaimed by garbage collection.
         /// </summary>
         ~RsaKey()
         {
-            // Do not re-create Dispose clean-up code here.
-            // Calling Dispose(false) is optimal in terms of
-            // readability and maintainability.
             Dispose(false);
         }
 
