@@ -98,8 +98,8 @@
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
             this.tableLayoutPanel1.Padding = new System.Windows.Forms.Padding(0, 2, 0, 0);
             this.tableLayoutPanel1.RowCount = 2;
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 85.99349F));
-            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 14.00651F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 88F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 12F));
             this.tableLayoutPanel1.Size = new System.Drawing.Size(528, 353);
             this.tableLayoutPanel1.TabIndex = 0;
             // 
@@ -140,7 +140,7 @@
             this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
             this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
             this.fieldsPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 22F));
-            this.fieldsPanel.Size = new System.Drawing.Size(338, 295);
+            this.fieldsPanel.Size = new System.Drawing.Size(338, 302);
             this.fieldsPanel.TabIndex = 3;
             this.fieldsPanel.Paint += new System.Windows.Forms.PaintEventHandler(this.fieldsPanel_Paint);
             // 
@@ -198,7 +198,7 @@
             this.portBox.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.portBox.Location = new System.Drawing.Point(115, 68);
             this.portBox.Name = "portBox";
-            this.portBox.Size = new System.Drawing.Size(68, 20);
+            this.portBox.Size = new System.Drawing.Size(108, 20);
             this.portBox.TabIndex = 2;
             // 
             // label3
@@ -285,9 +285,10 @@
             // 
             this.panel1.Controls.Add(this.letterBox);
             this.panel1.Controls.Add(this.mountCheck);
+            this.panel1.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel1.Location = new System.Drawing.Point(115, 255);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(182, 25);
+            this.panel1.Size = new System.Drawing.Size(220, 25);
             this.panel1.TabIndex = 12;
             // 
             // letterBox
@@ -298,17 +299,17 @@
             this.letterBox.FormattingEnabled = true;
             this.letterBox.Location = new System.Drawing.Point(0, 0);
             this.letterBox.Name = "letterBox";
-            this.letterBox.Size = new System.Drawing.Size(85, 22);
+            this.letterBox.Size = new System.Drawing.Size(106, 22);
             this.letterBox.Sorted = true;
             this.letterBox.TabIndex = 9;
             // 
             // mountCheck
             // 
             this.mountCheck.AutoSize = true;
-            this.mountCheck.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.mountCheck.Location = new System.Drawing.Point(100, 0);
+            this.mountCheck.Font = new System.Drawing.Font("Arial", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.mountCheck.Location = new System.Drawing.Point(126, 3);
             this.mountCheck.Name = "mountCheck";
-            this.mountCheck.Size = new System.Drawing.Size(82, 18);
+            this.mountCheck.Size = new System.Drawing.Size(91, 18);
             this.mountCheck.TabIndex = 10;
             this.mountCheck.Text = "Auto-Mount";
             this.mountCheck.UseVisualStyleBackColor = true;
@@ -414,10 +415,11 @@
             this.driveListView.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.None;
             this.driveListView.HideSelection = false;
             this.driveListView.LabelWrap = false;
-            this.driveListView.Location = new System.Drawing.Point(3, 5);
+            this.driveListView.Location = new System.Drawing.Point(5, 5);
+            this.driveListView.Margin = new System.Windows.Forms.Padding(5, 3, 3, 3);
             this.driveListView.MultiSelect = false;
             this.driveListView.Name = "driveListView";
-            this.driveListView.Size = new System.Drawing.Size(178, 295);
+            this.driveListView.Size = new System.Drawing.Size(176, 302);
             this.driveListView.SmallImageList = this.imageList;
             this.driveListView.TabIndex = 0;
             this.driveListView.UseCompatibleStateImageBehavior = false;
@@ -447,21 +449,22 @@
             this.tableLayoutPanel2.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 50F));
             this.tableLayoutPanel2.Controls.Add(this.removeButton, 1, 0);
             this.tableLayoutPanel2.Controls.Add(this.addButton, 0, 0);
-            this.tableLayoutPanel2.Location = new System.Drawing.Point(3, 306);
+            this.tableLayoutPanel2.Location = new System.Drawing.Point(3, 313);
             this.tableLayoutPanel2.Name = "tableLayoutPanel2";
             this.tableLayoutPanel2.RowCount = 1;
             this.tableLayoutPanel2.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 50F));
-            this.tableLayoutPanel2.Size = new System.Drawing.Size(178, 43);
+            this.tableLayoutPanel2.Size = new System.Drawing.Size(178, 37);
             this.tableLayoutPanel2.TabIndex = 2;
             // 
             // removeButton
             // 
             this.removeButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.removeButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.removeButton.Image = ((System.Drawing.Image)(resources.GetObject("removeButton.Image")));
-            this.removeButton.Location = new System.Drawing.Point(92, 3);
+            this.removeButton.Image = global::Sshfs.Properties.Resources.remove;
+            this.removeButton.Location = new System.Drawing.Point(90, 1);
+            this.removeButton.Margin = new System.Windows.Forms.Padding(1);
             this.removeButton.Name = "removeButton";
-            this.removeButton.Size = new System.Drawing.Size(83, 37);
+            this.removeButton.Size = new System.Drawing.Size(87, 35);
             this.removeButton.TabIndex = 2;
             this.removeButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
             this.removeButton.UseVisualStyleBackColor = true;
@@ -471,10 +474,11 @@
             // 
             this.addButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.addButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.addButton.Image = ((System.Drawing.Image)(resources.GetObject("addButton.Image")));
-            this.addButton.Location = new System.Drawing.Point(3, 3);
+            this.addButton.Image = global::Sshfs.Properties.Resources.add;
+            this.addButton.Location = new System.Drawing.Point(1, 1);
+            this.addButton.Margin = new System.Windows.Forms.Padding(1);
             this.addButton.Name = "addButton";
-            this.addButton.Size = new System.Drawing.Size(83, 37);
+            this.addButton.Size = new System.Drawing.Size(87, 35);
             this.addButton.TabIndex = 1;
             this.addButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
             this.addButton.UseVisualStyleBackColor = true;
@@ -489,11 +493,11 @@
             this.buttonPanel.Controls.Add(this.saveButton, 1, 0);
             this.buttonPanel.Controls.Add(this.muButton, 2, 0);
             this.buttonPanel.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.buttonPanel.Location = new System.Drawing.Point(187, 306);
+            this.buttonPanel.Location = new System.Drawing.Point(187, 313);
             this.buttonPanel.Name = "buttonPanel";
             this.buttonPanel.RowCount = 1;
             this.buttonPanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 100F));
-            this.buttonPanel.Size = new System.Drawing.Size(338, 44);
+            this.buttonPanel.Size = new System.Drawing.Size(338, 37);
             this.buttonPanel.TabIndex = 4;
             // 
             // saveButton
@@ -501,9 +505,10 @@
             this.saveButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.saveButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.saveButton.Image = global::Sshfs.Properties.Resources.save;
-            this.saveButton.Location = new System.Drawing.Point(115, 3);
+            this.saveButton.Location = new System.Drawing.Point(113, 1);
+            this.saveButton.Margin = new System.Windows.Forms.Padding(1);
             this.saveButton.Name = "saveButton";
-            this.saveButton.Size = new System.Drawing.Size(106, 38);
+            this.saveButton.Size = new System.Drawing.Size(110, 35);
             this.saveButton.TabIndex = 3;
             this.saveButton.Text = "Save";
             this.saveButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
@@ -515,9 +520,10 @@
             this.muButton.Dock = System.Windows.Forms.DockStyle.Fill;
             this.muButton.Font = new System.Drawing.Font("Arial", 9.75F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.muButton.Image = global::Sshfs.Properties.Resources.mount;
-            this.muButton.Location = new System.Drawing.Point(227, 3);
+            this.muButton.Location = new System.Drawing.Point(225, 1);
+            this.muButton.Margin = new System.Windows.Forms.Padding(1);
             this.muButton.Name = "muButton";
-            this.muButton.Size = new System.Drawing.Size(108, 38);
+            this.muButton.Size = new System.Drawing.Size(112, 35);
             this.muButton.TabIndex = 4;
             this.muButton.Text = "Mount";
             this.muButton.TextImageRelation = System.Windows.Forms.TextImageRelation.TextBeforeImage;
