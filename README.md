@@ -6,6 +6,8 @@ Intended for use with older machines (running XP or higher) that do not support 
 **NOTE: Windows 10 is not supported, they can use encrypted SMB3 connections ;)**
 
 
+
+
 Easily create a mapped network drive pointing to your SFTP shares:
 
 ![Example](Sshfs/Sshfs/example.png "Example")
