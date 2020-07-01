@@ -8,7 +8,7 @@ Intended for use with older machines (running XP or higher) that do not support 
 
 
 
-Easily create a mapped network drive pointing to your SFTP shares:
+Easily create mapped network drives pointing to your SFTP shares:
 
 ![Example](Sshfs/Sshfs/example.png "Example")
 
