@@ -1,4 +1,4 @@
-win-sshfs
+SSHFS Manager
 =========
 
 Fork of http://code.google.com/p/win-sshfs/
