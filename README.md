@@ -1,6 +1,6 @@
 SSHFS Manager
 =========
 
-Fork of http://code.google.com/p/win-sshfs/
+Intended for use with older machines (running XP or higher) that do not support SMB2+
 
-Focusing on compatability with Windows XP and above.
+**NOTE: Windows 10 is not supported, they can use encrypted SMB3 connections ;)**
