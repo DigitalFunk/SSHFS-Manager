@@ -8,7 +8,7 @@
         /// <summary>
         /// Channe request name
         /// </summary>
-        public const string Name = "window-change";
+        public const string NAME = "window-change";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +18,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return Name; }
+            get { return WindowChangeRequestInfo.NAME; }
         }
 
         /// <summary>
@@ -42,30 +42,11 @@
         public uint Height { get; private set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // Columns
-                capacity += 4; // Rows
-                capacity += 4; // Width
-                capacity += 4; // Height
-                return capacity;
-            }
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="WindowChangeRequestInfo"/> class.
         /// </summary>
         public WindowChangeRequestInfo()
         {
-            WantReply = false;
+            this.WantReply = false;
         }
 
         /// <summary>
@@ -78,10 +59,10 @@
         public WindowChangeRequestInfo(uint columns, uint rows, uint width, uint height)
             : this()
         {
-            Columns = columns;
-            Rows = rows;
-            Width = width;
-            Height = height;
+            this.Columns = columns;
+            this.Rows = rows;
+            this.Width = width;
+            this.Height = height;
         }
 
         /// <summary>
@@ -91,10 +72,10 @@
         {
             base.LoadData();
 
-            Columns = ReadUInt32();
-            Rows = ReadUInt32();
-            Width = ReadUInt32();
-            Height = ReadUInt32();
+            this.Columns = this.ReadUInt32();
+            this.Rows = this.ReadUInt32();
+            this.Width = this.ReadUInt32();
+            this.Height = this.ReadUInt32();
         }
 
         /// <summary>
@@ -104,10 +85,10 @@
         {
             base.SaveData();
 
-            Write(Columns);
-            Write(Rows);
-            Write(Width);
-            Write(Height);
+            this.Write(this.Columns);
+            this.Write(this.Rows);
+            this.Write(this.Width);
+            this.Write(this.Height);
         }
     }
 }

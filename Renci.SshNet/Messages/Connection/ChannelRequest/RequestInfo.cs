@@ -24,27 +24,11 @@ namespace Renci.SshNet.Messages.Connection
         public bool WantReply { get; protected set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 1; // WantReply
-                return capacity;
-            }
-        }
-
-        /// <summary>
         /// Called when type specific data need to be loaded.
         /// </summary>
         protected override void LoadData()
         {
-            WantReply = ReadBoolean();
+            this.WantReply = this.ReadBoolean();
         }
 
         /// <summary>
@@ -52,7 +36,7 @@ namespace Renci.SshNet.Messages.Connection
         /// </summary>
         protected override void SaveData()
         {
-            Write(WantReply);
+            this.Write(this.WantReply);
         }
     }
 }

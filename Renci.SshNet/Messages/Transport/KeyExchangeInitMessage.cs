@@ -1,4 +1,6 @@
-﻿using Renci.SshNet.Abstractions;
+﻿using System;
+using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace Renci.SshNet.Messages.Transport
 {
@@ -6,16 +8,18 @@ namespace Renci.SshNet.Messages.Transport
     /// Represents SSH_MSG_KEXINIT message.
     /// </summary>
     [Message("SSH_MSG_KEXINIT", 20)]
-    public class KeyExchangeInitMessage : Message, IKeyExchangedAllowed
+    public class KeyExchangeInitMessage : Message,IKeyExchangedAllowed
     {
+        private static RNGCryptoServiceProvider _randomizer = new System.Security.Cryptography.RNGCryptoServiceProvider();
+
         /// <summary>
         /// Initializes a new instance of the <see cref="KeyExchangeInitMessage"/> class.
         /// </summary>
         public KeyExchangeInitMessage()
         {
             var cookie = new byte[16];
-            CryptoAbstraction.GenerateRandom(cookie);
-            Cookie = cookie;
+            _randomizer.GetBytes(cookie);
+            this.Cookie = cookie;
         }
 
         #region Message Properties
@@ -109,7 +113,7 @@ namespace Renci.SshNet.Messages.Transport
         /// Gets or sets a value indicating whether first key exchange packet follows.
         /// </summary>
         /// <value>
-        /// <c>true</c> if first key exchange packet follows; otherwise, <c>false</c>.
+        /// 	<c>true</c> if first key exchange packet follows; otherwise, <c>false</c>.
         /// </value>
         public bool FirstKexPacketFollows { get; set; }
 
@@ -119,40 +123,30 @@ namespace Renci.SshNet.Messages.Transport
         /// <value>
         /// The reserved value.
         /// </value>
-        public uint Reserved { get; set; }
+        public UInt32 Reserved { get; set; }
 
         #endregion
-
-        /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// <c>-1</c> to indicate that the size of the message cannot be determined,
-        /// or is too costly to calculate.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get { return -1; }
-        }
 
         /// <summary>
         /// Called when type specific data need to be loaded.
         /// </summary>
         protected override void LoadData()
         {
-            Cookie = ReadBytes(16);
-            KeyExchangeAlgorithms = ReadNamesList();
-            ServerHostKeyAlgorithms = ReadNamesList();
-            EncryptionAlgorithmsClientToServer = ReadNamesList();
-            EncryptionAlgorithmsServerToClient = ReadNamesList();
-            MacAlgorithmsClientToServer = ReadNamesList();
-            MacAlgorithmsServerToClient = ReadNamesList();
-            CompressionAlgorithmsClientToServer = ReadNamesList();
-            CompressionAlgorithmsServerToClient = ReadNamesList();
-            LanguagesClientToServer = ReadNamesList();
-            LanguagesServerToClient = ReadNamesList();
-            FirstKexPacketFollows = ReadBoolean();
-            Reserved = ReadUInt32();
+            this.ResetReader();
+
+            this.Cookie = this.ReadBytes(16);
+            this.KeyExchangeAlgorithms = this.ReadNamesList();
+            this.ServerHostKeyAlgorithms = this.ReadNamesList();
+            this.EncryptionAlgorithmsClientToServer = this.ReadNamesList();
+            this.EncryptionAlgorithmsServerToClient = this.ReadNamesList();
+            this.MacAlgorithmsClientToServer = this.ReadNamesList();
+            this.MacAlgorithmsServerToClient = this.ReadNamesList();
+            this.CompressionAlgorithmsClientToServer = this.ReadNamesList();
+            this.CompressionAlgorithmsServerToClient = this.ReadNamesList();
+            this.LanguagesClientToServer = this.ReadNamesList();
+            this.LanguagesServerToClient = this.ReadNamesList();
+            this.FirstKexPacketFollows = this.ReadBoolean();
+            this.Reserved = this.ReadUInt32();
         }
 
         /// <summary>
@@ -160,24 +154,19 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void SaveData()
         {
-            Write(Cookie);
-            Write(KeyExchangeAlgorithms);
-            Write(ServerHostKeyAlgorithms);
-            Write(EncryptionAlgorithmsClientToServer);
-            Write(EncryptionAlgorithmsServerToClient);
-            Write(MacAlgorithmsClientToServer);
-            Write(MacAlgorithmsServerToClient);
-            Write(CompressionAlgorithmsClientToServer);
-            Write(CompressionAlgorithmsServerToClient);
-            Write(LanguagesClientToServer);
-            Write(LanguagesServerToClient);
-            Write(FirstKexPacketFollows);
-            Write(Reserved);
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnKeyExchangeInitReceived(this);
+            this.Write(this.Cookie);
+            this.Write(this.KeyExchangeAlgorithms);
+            this.Write(this.ServerHostKeyAlgorithms);
+            this.Write(this.EncryptionAlgorithmsClientToServer);
+            this.Write(this.EncryptionAlgorithmsServerToClient);
+            this.Write(this.MacAlgorithmsClientToServer);
+            this.Write(this.MacAlgorithmsServerToClient);
+            this.Write(this.CompressionAlgorithmsClientToServer);
+            this.Write(this.CompressionAlgorithmsServerToClient);
+            this.Write(this.LanguagesClientToServer);
+            this.Write(this.LanguagesServerToClient);
+            this.Write(this.FirstKexPacketFollows);
+            this.Write(this.Reserved);
         }
     }
 }

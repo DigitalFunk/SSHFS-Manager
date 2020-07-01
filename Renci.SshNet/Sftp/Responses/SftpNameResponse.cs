@@ -1,5 +1,6 @@
-﻿using Renci.SshNet.Common;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Renci.SshNet.Sftp.Responses
@@ -13,59 +14,27 @@ namespace Renci.SshNet.Sftp.Responses
 
         public uint Count { get; private set; }
 
-        public Encoding Encoding { get; private set; }
+        public KeyValuePair<string, SftpFileAttributes>[] Files { get; private set; }
 
-        public KeyValuePair<string, SftpFileAttributes>[] Files { get; set; }
-
-        public SftpNameResponse(uint protocolVersion, Encoding encoding)
-            : base(protocolVersion)
+        public SftpNameResponse()
         {
-            Files = Array<KeyValuePair<string, SftpFileAttributes>>.Empty;
-            Encoding = encoding;
+            this.Files = new KeyValuePair<string,SftpFileAttributes>[0];
         }
 
         protected override void LoadData()
         {
             base.LoadData();
             
-            Count = ReadUInt32();
-            Files = new KeyValuePair<string, SftpFileAttributes>[Count];
-
-            for (var i = 0; i < Count; i++)
+            this.Count = this.ReadUInt32();
+            this.Files = new KeyValuePair<string, SftpFileAttributes>[this.Count];
+            
+            for (int i = 0; i < this.Count; i++)
             {
-                var fileName = ReadString(Encoding);
-                if (SupportsLongName(ProtocolVersion))
-                {
-                    ReadString(Encoding); // skip longname
-                }
-                Files[i] = new KeyValuePair<string, SftpFileAttributes>(fileName, ReadAttributes());
+                var fileName = this.ReadString();
+                this.ReadString();   //  This field value has meaningless information
+                var attributes = this.ReadAttributes();
+                this.Files[i] = new KeyValuePair<string, SftpFileAttributes>(fileName, attributes);
             }
-        }
-
-        protected override void SaveData()
-        {
-            base.SaveData();
-
-            Write((uint) Files.Length); // count
-
-            for (var i = 0; i < Files.Length; i++)
-            {
-                var file = Files[i];
-
-                Write(file.Key, Encoding); // filename
-
-                if (SupportsLongName(ProtocolVersion))
-                {
-                    Write(0U); // longname
-                }
-
-                Write(file.Value.GetBytes()); // attrs
-            }
-        }
-
-        private static bool SupportsLongName(uint protocolVersion)
-        {
-            return protocolVersion <= 3U;
         }
     }
 }

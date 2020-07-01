@@ -1,4 +1,9 @@
-﻿namespace Renci.SshNet.Sftp.Responses
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Renci.SshNet.Sftp.Responses
 {
     internal class SftpDataResponse : SftpResponse
     {
@@ -9,23 +14,18 @@
 
         public byte[] Data { get; set; }
 
-        public SftpDataResponse(uint protocolVersion)
-            : base(protocolVersion)
-        {
-        }
+        public bool IsEof { get; set; }
 
         protected override void LoadData()
         {
             base.LoadData();
             
-            Data = ReadBinary();
-        }
+            this.Data = this.ReadBinaryString();
 
-        protected override void SaveData()
-        {
-            base.SaveData();
-
-            WriteBinary(Data, 0, Data.Length);
+            if (!this.IsEndOfData)
+            {
+                this.IsEof = this.ReadBoolean();
+            }
         }
     }
 }

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Renci.SshNet.Sftp.Responses;
 
 namespace Renci.SshNet.Sftp.Requests
@@ -12,39 +15,22 @@ namespace Renci.SshNet.Sftp.Requests
 
         public byte[] Handle { get; private set; }
 
-        /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
+        public SftpCloseRequest(uint requestId, byte[] handle, Action<SftpStatusResponse> statusAction)
+            : base(requestId, statusAction)
         {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // Handle length
-                capacity += Handle.Length; // Handle
-                return capacity;
-            }
-        }
-
-        public SftpCloseRequest(uint protocolVersion, uint requestId, byte[] handle, Action<SftpStatusResponse> statusAction)
-            : base(protocolVersion, requestId, statusAction)
-        {
-            Handle = handle;
+            this.Handle = handle;
         }
 
         protected override void LoadData()
         {
             base.LoadData();
-            Handle = ReadBinary();
+            this.Handle = this.ReadBinaryString();
         }
 
         protected override void SaveData()
         {
             base.SaveData();
-            WriteBinaryString(Handle);
+            this.WriteBinaryString(this.Handle);
         }
     }
 }

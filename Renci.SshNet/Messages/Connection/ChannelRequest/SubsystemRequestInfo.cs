@@ -5,12 +5,10 @@
     /// </summary>
     internal class SubsystemRequestInfo : RequestInfo
     {
-        private byte[] _subsystemName;
-
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string Name = "subsystem";
+        public const string NAME = "subsystem";
 
         /// <summary>
         /// Gets the name of the request.
@@ -20,7 +18,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return Name; }
+            get { return SubsystemRequestInfo.NAME; }
         }
 
         /// <summary>
@@ -29,29 +27,14 @@
         /// <value>
         /// The name of the subsystem.
         /// </value>
-        public string SubsystemName
-        {
-            get { return Ascii.GetString(_subsystemName, 0, _subsystemName.Length); }
-            private set { _subsystemName = Ascii.GetBytes(value); }
-        }
-
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // SubsystemName length
-                capacity += _subsystemName.Length; // SubsystemName
-                return capacity;
-            }
-        }
+        public string SubsystemName { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SubsystemRequestInfo"/> class.
         /// </summary>
         public SubsystemRequestInfo()
         {
-            WantReply = true;
+            this.WantReply = true;
         }
 
         /// <summary>
@@ -61,7 +44,7 @@
         public SubsystemRequestInfo(string subsystem)
             : this()
         {
-            SubsystemName = subsystem;
+            this.SubsystemName = subsystem;
         }
 
         /// <summary>
@@ -71,7 +54,7 @@
         {
             base.LoadData();
 
-            _subsystemName = ReadBinary();
+            this.SubsystemName = this.ReadString();
         }
 
         /// <summary>
@@ -81,7 +64,7 @@
         {
             base.SaveData();
 
-            WriteBinaryString(_subsystemName);
+            this.Write(this.SubsystemName);
         }
     }
 }

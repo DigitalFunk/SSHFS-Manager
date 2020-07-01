@@ -38,5 +38,10 @@ namespace Sshfs
 
            // ControlPaint.DrawBorder(e.Graphics, new Rectangle(0, panel1.Height-1, panel1.Width, panel1.Height-1), SystemColors.ActiveBorder, ButtonBorderStyle.Dashed);
         }
+
+        private void GroupBox1_Enter(object sender, EventArgs e)
+        {
+
+        }
     }
 }

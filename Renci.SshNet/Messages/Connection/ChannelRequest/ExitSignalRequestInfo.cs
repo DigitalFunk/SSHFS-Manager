@@ -1,18 +1,15 @@
-﻿namespace Renci.SshNet.Messages.Connection
+﻿using System.Text;
+namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Represents "exit-signal" type channel request information
     /// </summary>
     internal class ExitSignalRequestInfo : RequestInfo
     {
-        private byte[] _signalName;
-        private byte[] _errorMessage;
-        private byte[] _language;
-
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string Name = "exit-signal";
+        public const string NAME = "exit-signal";
 
         /// <summary>
         /// Gets the name of the request.
@@ -22,7 +19,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return Name; }
+            get { return ExitSignalRequestInfo.NAME; }
         }
 
         /// <summary>
@@ -31,11 +28,7 @@
         /// <value>
         /// The name of the signal.
         /// </value>
-        public string SignalName
-        {
-            get { return Ascii.GetString(_signalName, 0, _signalName.Length); }
-            private set { _signalName = Ascii.GetBytes(value); }
-        }
+        public string SignalName { get; private set; }
 
         /// <summary>
         /// Gets a value indicating whether core is dumped.
@@ -48,43 +41,19 @@
         /// <summary>
         /// Gets the error message.
         /// </summary>
-        public string ErrorMessage
-        {
-            get { return Utf8.GetString(_errorMessage, 0, _errorMessage.Length); }
-            private set { _errorMessage = Utf8.GetBytes(value); }
-        }
+        public string ErrorMessage { get; private set; }
 
         /// <summary>
         /// Gets message language.
         /// </summary>
-        public string Language
-        {
-            get { return Utf8.GetString(_language, 0, _language.Length); }
-            private set { _language = Utf8.GetBytes(value); }
-        }
-
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // SignalName length
-                capacity += _signalName.Length; // SignalName
-                capacity += 1; // CoreDumped
-                capacity += 4; // ErrorMessage length
-                capacity += _errorMessage.Length; // ErrorMessage
-                capacity += 4; // Language length
-                capacity += _language.Length; // Language
-                return capacity;
-            }
-        }
+        public string Language { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExitSignalRequestInfo"/> class.
         /// </summary>
         public ExitSignalRequestInfo()
         {
-            WantReply = false;
+            this.WantReply = false;
         }
 
         /// <summary>
@@ -97,10 +66,10 @@
         public ExitSignalRequestInfo(string signalName, bool coreDumped, string errorMessage, string language)
             : this()
         {
-            SignalName = signalName;
-            CoreDumped = coreDumped;
-            ErrorMessage = errorMessage;
-            Language = language;
+            this.SignalName = signalName;
+            this.CoreDumped = coreDumped;
+            this.ErrorMessage = errorMessage;
+            this.Language = language;
         }
 
         /// <summary>
@@ -110,10 +79,10 @@
         {
             base.LoadData();
 
-            _signalName = ReadBinary();
-            CoreDumped = ReadBoolean();
-            _errorMessage = ReadBinary();
-            _language = ReadBinary();
+            this.SignalName = this.ReadString();
+            this.CoreDumped = this.ReadBoolean();
+            this.ErrorMessage = this.ReadString();
+            this.Language = this.ReadString();
         }
 
         /// <summary>
@@ -123,10 +92,11 @@
         {
             base.SaveData();
 
-            WriteBinaryString(_signalName);
-            Write(CoreDumped);
-            Write(_errorMessage);
-            Write(_language);
+            this.Write(this.SignalName);
+            this.Write(this.CoreDumped);
+            this.Write(this.ErrorMessage);
+            this.Write(this.Language, Encoding.UTF8);
         }
+
     }
 }

@@ -1,12 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Renci.SshNet.Sftp.Responses;
 
 namespace Renci.SshNet.Sftp.Requests
 {
     internal class SftpFSetStatRequest : SftpRequest
     {
-        private byte[] _attributesBytes;
-
         public override SftpMessageTypes SftpMessageType
         {
             get { return SftpMessageTypes.FSetStat; }
@@ -14,57 +15,27 @@ namespace Renci.SshNet.Sftp.Requests
 
         public byte[] Handle { get; private set; }
 
-        private SftpFileAttributes Attributes { get; set; }
+        public SftpFileAttributes Attributes { get; private set; }
 
-        private byte[] AttributesBytes
+        public SftpFSetStatRequest(uint requestId, byte[] handle, SftpFileAttributes attributes, Action<SftpStatusResponse> statusAction)
+            : base(requestId, statusAction)
         {
-            get
-            {
-                if (_attributesBytes == null)
-                {
-                    _attributesBytes = Attributes.GetBytes();
-                }
-                return _attributesBytes;
-            }
-        }
-
-        /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // Handle length
-                capacity += Handle.Length; // Handle
-                capacity += AttributesBytes.Length; // Attributes
-                return capacity;
-            }
-        }
-
-        public SftpFSetStatRequest(uint protocolVersion, uint requestId, byte[] handle, SftpFileAttributes attributes, Action<SftpStatusResponse> statusAction)
-            : base(protocolVersion, requestId, statusAction)
-        {
-            Handle = handle;
-            Attributes = attributes;
+            this.Handle = handle;
+            this.Attributes = attributes;
         }
 
         protected override void LoadData()
         {
             base.LoadData();
-            Handle = ReadBinary();
-            Attributes = ReadAttributes();
+            this.Handle = this.ReadBinaryString();
+            this.Attributes = this.ReadAttributes();
         }
 
         protected override void SaveData()
         {
             base.SaveData();
-            WriteBinaryString(Handle);
-            Write(AttributesBytes);
+            this.WriteBinaryString(this.Handle);
+            this.Write(this.Attributes);
         }
     }
 }

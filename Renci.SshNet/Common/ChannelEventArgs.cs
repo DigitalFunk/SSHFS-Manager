@@ -18,7 +18,7 @@ namespace Renci.SshNet.Common
         /// <param name="channelNumber">The channel number.</param>
         public ChannelEventArgs(uint channelNumber)
         {
-            ChannelNumber = channelNumber;
+            this.ChannelNumber = channelNumber;
         }
     }
 }

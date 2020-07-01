@@ -19,10 +19,5 @@
         protected override void SaveData()
         {
         }
-
-        internal override void Process(Session session)
-        {
-            session.OnUserAuthenticationSuccessReceived(this);
-        }
     }
 }

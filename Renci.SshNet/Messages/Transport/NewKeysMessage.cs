@@ -1,10 +1,10 @@
 ﻿namespace Renci.SshNet.Messages.Transport
 {
     /// <summary>
-    /// Represents SSH_MSG_NEWKEYS message.
+    /// Represents SSH_MSG_KEXINIT message.
     /// </summary>
     [Message("SSH_MSG_NEWKEYS", 21)]
-    public class NewKeysMessage : Message, IKeyExchangedAllowed
+    public class NewKeysMessage : Message,IKeyExchangedAllowed
     {
         /// <summary>
         /// Called when type specific data need to be loaded.
@@ -18,11 +18,6 @@
         /// </summary>
         protected override void SaveData()
         {
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnNewKeysReceived(this);
         }
     }
 }

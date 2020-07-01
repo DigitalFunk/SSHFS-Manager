@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Sftp
@@ -9,17 +12,6 @@ namespace Renci.SshNet.Sftp
     public class SftpDownloadAsyncResult :  AsyncResult
     {
         /// <summary>
-        /// Gets or sets a value indicating whether to cancel asynchronous download operation.
-        /// </summary>
-        /// <value>
-        /// <c>true</c> if download operation to be canceled; otherwise, <c>false</c>.
-        /// </value>
-        /// <remarks>
-        /// Download operation will be canceled after finishing uploading current buffer.
-        /// </remarks>
-        public bool IsDownloadCanceled { get; set; }
-
-        /// <summary>
         /// Gets the number of downloaded bytes.
         /// </summary>
         public ulong DownloadedBytes { get; private set; }
@@ -29,9 +21,10 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         /// <param name="asyncCallback">The async callback.</param>
         /// <param name="state">The state.</param>
-        public SftpDownloadAsyncResult(AsyncCallback asyncCallback, object state)
+        public SftpDownloadAsyncResult(AsyncCallback asyncCallback, Object state)
             : base(asyncCallback, state)
         {
+
         }
 
         /// <summary>
@@ -40,7 +33,7 @@ namespace Renci.SshNet.Sftp
         /// <param name="downloadedBytes">Number of downloaded bytes.</param>
         internal void Update(ulong downloadedBytes)
         {
-            DownloadedBytes = downloadedBytes;
+            this.DownloadedBytes = downloadedBytes;
         }
     }
 }

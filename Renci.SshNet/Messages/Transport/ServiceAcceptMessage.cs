@@ -1,16 +1,13 @@
 ﻿using System;
-using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Messages.Transport
 {
     /// <summary>
     /// Represents SSH_MSG_SERVICE_ACCEPT message.
     /// </summary>
-    [Message("SSH_MSG_SERVICE_ACCEPT", MessageNumber)]
+    [Message("SSH_MSG_SERVICE_ACCEPT", 6)]
     public class ServiceAcceptMessage : Message
     {
-        internal const byte MessageNumber = 6;
-
         /// <summary>
         /// Gets the name of the service.
         /// </summary>
@@ -24,7 +21,18 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void LoadData()
         {
-            ServiceName = ReadBinary().ToServiceName();
+            var serviceName = this.ReadString();
+            switch (serviceName)
+            {
+                case "ssh-userauth":
+                    this.ServiceName = ServiceName.UserAuthentication;
+                    break;
+                case "ssh-connection":
+                    this.ServiceName = ServiceName.Connection;
+                    break;
+                default:
+                    break;
+            }
         }
 
         /// <summary>
@@ -32,12 +40,7 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void SaveData()
         {
-            throw new NotImplementedException();
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnServiceAcceptReceived(this);
+            throw new InvalidOperationException("Save data is not supported.");
         }
     }
 }

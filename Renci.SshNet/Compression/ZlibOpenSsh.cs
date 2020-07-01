@@ -1,12 +1,15 @@
-﻿using Renci.SshNet.Messages.Authentication;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Renci.SshNet.Compression
 {
     /// <summary>
     /// Represents "zlib@openssh.org" compression implementation
     /// </summary>
-    public class ZlibOpenSsh : Compressor
+    internal class ZlibOpenSsh : Compressor
     {
+        private bool _active;
+
         /// <summary>
         /// Gets algorithm name.
         /// </summary>
@@ -26,10 +29,82 @@ namespace Renci.SshNet.Compression
             session.UserAuthenticationSuccessReceived += Session_UserAuthenticationSuccessReceived;
         }
 
-        private void Session_UserAuthenticationSuccessReceived(object sender, MessageEventArgs<SuccessMessage> e)
+        private void Session_UserAuthenticationSuccessReceived(object sender, MessageEventArgs<Messages.Authentication.SuccessMessage> e)
         {
-            IsActive = true;
-            Session.UserAuthenticationSuccessReceived -= Session_UserAuthenticationSuccessReceived;
+            this._active = true;
+            this.Session.UserAuthenticationSuccessReceived -= Session_UserAuthenticationSuccessReceived;
+        }
+
+        /// <summary>
+        /// Compresses the specified data.
+        /// </summary>
+        /// <param name="data">Data to compress.</param>
+        /// <returns>
+        /// Compressed data
+        /// </returns>
+        public override byte[] Compress(byte[] data)
+        {
+            if (!this._active)
+            {
+                return data;
+            }
+            throw new NotImplementedException();
+
+            //using (var output = new MemoryStream())
+            //{
+            //    using (var input = new MemoryStream(data.ToArray()))
+            //    using (var compress = new DeflateStream(output, CompressionMode.Compress))
+            //    {
+            //        compress.FlushMode = FlushType.Partial;
+
+            //        input.CopyTo(compress);
+
+            //        var result = new List<byte>();
+
+            //        result.Add(0x78);
+            //        result.Add(0x9c);
+
+            //        result.AddRange(output.ToArray());
+
+            //        return result;
+            //    }
+            //}
+        }
+
+        /// <summary>
+        /// Decompresses the specified data.
+        /// </summary>
+        /// <param name="data">Compressed data.</param>
+        /// <returns>
+        /// Decompressed data.
+        /// </returns>
+        public override byte[] Decompress(byte[] data)
+        {
+            if (!this._active)
+            {
+                return data;
+            }
+
+            throw new NotImplementedException();
+
+            //Create the decompressed file.
+            //using (var output = new MemoryStream())
+            //{
+            //    using (var input = new MemoryStream(data.ToArray()))
+            //    {
+            //        input.ReadByte();
+            //        input.ReadByte();
+
+            //        using (var decompress = new DeflateStream(input, CompressionMode.Decompress))
+            //        {
+            //            // Copy the decompression stream 
+            //            // into the output file.
+            //            decompress.CopyTo(output);
+            //        }
+            //    }
+
+            //    return output.ToArray();
+            //}
         }
     }
 }

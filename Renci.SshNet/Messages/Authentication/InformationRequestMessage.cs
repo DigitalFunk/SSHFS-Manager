@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
-using System.Text;
 using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Messages.Authentication
@@ -36,24 +36,21 @@ namespace Renci.SshNet.Messages.Authentication
         /// </summary>
         protected override void LoadData()
         {
-            Name = ReadString(Encoding.UTF8);
-            Instruction = ReadString(Encoding.UTF8);
+            this.Name = this.ReadString();
+            this.Instruction = this.ReadString();
+            this.Language = this.ReadString();
 
-            // language tag as defined in rfc3066:
-            // Language tags may always be presented using the characters A-Z, a-z, 0 - 9 and HYPHEN-MINUS
-            Language = ReadString(Ascii);
-
-            var numOfPrompts = ReadUInt32();
+            var numOfPrompts = this.ReadUInt32();
             var prompts = new List<AuthenticationPrompt>();
 
-            for (var i = 0; i < numOfPrompts; i++)
+            for (int i = 0; i < numOfPrompts; i++)
             {
-                var prompt = ReadString(Encoding.UTF8);
-                var echo = ReadBoolean();
+                var prompt = this.ReadString();
+                var echo = this.ReadBoolean();
                 prompts.Add(new AuthenticationPrompt(i, echo, prompt));
             }
 
-            Prompts = prompts;
+            this.Prompts = prompts;
         }
 
         /// <summary>
@@ -62,11 +59,6 @@ namespace Renci.SshNet.Messages.Authentication
         protected override void SaveData()
         {
             throw new NotImplementedException();
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnUserAuthenticationInformationRequestReceived(this);
         }
     }
 }

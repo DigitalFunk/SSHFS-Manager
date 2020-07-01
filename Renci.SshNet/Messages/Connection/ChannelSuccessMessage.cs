@@ -19,13 +19,8 @@
         /// </summary>
         /// <param name="localChannelNumber">The local channel number.</param>
         public ChannelSuccessMessage(uint localChannelNumber)
-            : base(localChannelNumber)
         {
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnChannelSuccessReceived(this);
+            this.LocalChannelNumber = localChannelNumber;
         }
     }
 }

@@ -1,4 +1,9 @@
-﻿namespace Renci.SshNet.Common
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Renci.SshNet.Common
 {
     /// <summary>
     /// Provides data for <see cref="Renci.SshNet.PasswordConnectionInfo.PasswordExpired"/> event.
@@ -11,7 +16,7 @@
         /// <value>
         /// The new password.
         /// </value>
-        public byte[] NewPassword { get; set; }
+        public string NewPassword { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="AuthenticationPasswordChangeEventArgs"/> class.

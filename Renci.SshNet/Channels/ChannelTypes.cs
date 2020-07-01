@@ -21,6 +21,8 @@ namespace Renci.SshNet.Channels
         /// <summary>
         /// direct-tcpip
         /// </summary>
-        DirectTcpip
+        DirectTcpip,
+
+
     }
 }

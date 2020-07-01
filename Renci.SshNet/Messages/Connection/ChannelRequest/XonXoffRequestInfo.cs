@@ -8,7 +8,7 @@
         /// <summary>
         /// Channel request type
         /// </summary>
-        public const string Name = "xon-xoff";
+        public const string NAME = "xon-xoff";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +18,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return Name; }
+            get { return XonXoffRequestInfo.NAME; }
         }
 
         /// <summary>
@@ -30,27 +30,11 @@
         public bool ClientCanDo { get; set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 1; // ClientCanDo
-                return capacity;
-            }
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="XonXoffRequestInfo"/> class.
         /// </summary>
         public XonXoffRequestInfo()
         {
-            WantReply = false;
+            this.WantReply = false;
         }
 
         /// <summary>
@@ -60,7 +44,7 @@
         public XonXoffRequestInfo(bool clientCanDo)
             : this()
         {
-            ClientCanDo = clientCanDo;
+            this.ClientCanDo = clientCanDo;
         }
 
         /// <summary>
@@ -70,7 +54,7 @@
         {
             base.LoadData();
 
-            ClientCanDo = ReadBoolean();
+            this.ClientCanDo = this.ReadBoolean();
         }
 
         /// <summary>
@@ -80,7 +64,7 @@
         {
             base.SaveData();
 
-            Write(ClientCanDo);
+            this.Write(this.ClientCanDo);
         }
     }
 }

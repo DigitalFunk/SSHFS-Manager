@@ -1,15 +1,10 @@
-﻿using System;
-
-namespace Renci.SshNet.Messages.Connection
+﻿namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Used to open "direct-tcpip" channel type
     /// </summary>
     internal class DirectTcpipChannelInfo : ChannelOpenInfo
     {
-        private byte[] _hostToConnect;
-        private byte[] _originatorAddress;
-
         /// <summary>
         /// Specifies channel open type
         /// </summary>
@@ -23,17 +18,13 @@ namespace Renci.SshNet.Messages.Connection
         /// </value>
         public override string ChannelType
         {
-            get { return NAME; }
+            get { return DirectTcpipChannelInfo.NAME; }
         }
 
         /// <summary>
         /// Gets the host to connect.
         /// </summary>
-        public string HostToConnect
-        {
-            get { return Utf8.GetString(_hostToConnect, 0, _hostToConnect.Length); }
-            private set { _hostToConnect = Utf8.GetBytes(value); }
-        }
+        public string HostToConnect { get; private set; }
 
         /// <summary>
         /// Gets the port to connect.
@@ -43,11 +34,7 @@ namespace Renci.SshNet.Messages.Connection
         /// <summary>
         /// Gets the originator address.
         /// </summary>
-        public string OriginatorAddress
-        {
-            get { return Utf8.GetString(_originatorAddress, 0, _originatorAddress.Length); }
-            private set { _originatorAddress = Utf8.GetBytes(value); }
-        }
+        public string OriginatorAddress { get; private set; }
 
         /// <summary>
         /// Gets the originator port.
@@ -55,34 +42,11 @@ namespace Renci.SshNet.Messages.Connection
         public uint OriginatorPort { get; private set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
+        /// Initializes a new instance of the <see cref="DirectTcpipChannelInfo"/> class.
         /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
+        public DirectTcpipChannelInfo()
         {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // HostToConnect length
-                capacity += _hostToConnect.Length; // HostToConnect
-                capacity += 4; // PortToConnect
-                capacity += 4; // OriginatorAddress length
-                capacity += _originatorAddress.Length; // OriginatorAddress
-                capacity += 4; // OriginatorPort
-                return capacity;
-            }
-        }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="DirectTcpipChannelInfo"/> class from the
-        /// specified data.
-        /// </summary>
-        /// <exception cref="ArgumentNullException"><paramref name="data"/> is <c>null</c>.</exception>
-        public DirectTcpipChannelInfo(byte[] data)
-        {
-            Load(data);
         }
 
         /// <summary>
@@ -94,10 +58,10 @@ namespace Renci.SshNet.Messages.Connection
         /// <param name="originatorPort">The originator port.</param>
         public DirectTcpipChannelInfo(string hostToConnect, uint portToConnect, string originatorAddress, uint originatorPort)
         {
-            HostToConnect = hostToConnect;
-            PortToConnect = portToConnect;
-            OriginatorAddress = originatorAddress;
-            OriginatorPort = originatorPort;
+            this.HostToConnect = hostToConnect;
+            this.PortToConnect = portToConnect;
+            this.OriginatorAddress = originatorAddress;
+            this.OriginatorPort = originatorPort;
         }
 
         /// <summary>
@@ -107,10 +71,10 @@ namespace Renci.SshNet.Messages.Connection
         {
             base.LoadData();
 
-            _hostToConnect = ReadBinary();
-            PortToConnect = ReadUInt32();
-            _originatorAddress = ReadBinary();
-            OriginatorPort = ReadUInt32();
+            this.HostToConnect = this.ReadString();
+            this.PortToConnect = this.ReadUInt32();
+            this.OriginatorAddress = this.ReadString();
+            this.OriginatorPort = this.ReadUInt32();
         }
 
         /// <summary>
@@ -120,10 +84,10 @@ namespace Renci.SshNet.Messages.Connection
         {
             base.SaveData();
 
-            WriteBinaryString(_hostToConnect);
-            Write(PortToConnect);
-            WriteBinaryString(_originatorAddress);
-            Write(OriginatorPort);
+            this.Write(this.HostToConnect);
+            this.Write(this.PortToConnect);
+            this.Write(this.OriginatorAddress);
+            this.Write(this.OriginatorPort);
         }
     }
 }

@@ -167,8 +167,9 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+
+                return ERROR_FILE_NOT_FOUND;
             }
         }
 
@@ -185,8 +186,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -203,8 +204,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -221,8 +222,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -239,8 +240,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -260,8 +261,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -281,8 +282,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -299,8 +300,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -352,8 +353,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -391,8 +392,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_HANDLE;
             }
         }
 
@@ -443,8 +444,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -460,8 +461,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -479,8 +480,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -516,8 +517,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -533,8 +534,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -551,8 +552,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -571,8 +572,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -590,8 +591,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -610,8 +611,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -630,8 +631,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -668,8 +669,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -684,8 +685,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -742,8 +743,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 
@@ -787,8 +788,8 @@ namespace DokanNet
             {
 #if DEBUG
                 throw;
-
 #endif
+                return ERROR_INVALID_FUNCTION;
             }
         }
 

@@ -28,28 +28,11 @@
         public uint MaximumPacketSize { get; private set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // RemoteChannelNumber
-                capacity += 4; // InitialWindowSize
-                capacity += 4; // MaximumPacketSize
-                return capacity;
-            }
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="ChannelOpenConfirmationMessage"/> class.
         /// </summary>
         public ChannelOpenConfirmationMessage()
         {
+
         }
 
         /// <summary>
@@ -60,11 +43,11 @@
         /// <param name="maximumPacketSize">Maximum size of the packet.</param>
         /// <param name="remoteChannelNumber">The remote channel number.</param>
         public ChannelOpenConfirmationMessage(uint localChannelNumber, uint initialWindowSize, uint maximumPacketSize, uint remoteChannelNumber)
-            : base(localChannelNumber)
         {
-            InitialWindowSize = initialWindowSize;
-            MaximumPacketSize = maximumPacketSize;
-            RemoteChannelNumber = remoteChannelNumber;
+            this.LocalChannelNumber = localChannelNumber;
+            this.InitialWindowSize = initialWindowSize;
+            this.MaximumPacketSize = maximumPacketSize;
+            this.RemoteChannelNumber = remoteChannelNumber;
         }
 
         /// <summary>
@@ -73,9 +56,9 @@
         protected override void LoadData()
         {
             base.LoadData();
-            RemoteChannelNumber = ReadUInt32();
-            InitialWindowSize = ReadUInt32();
-            MaximumPacketSize = ReadUInt32();
+            this.RemoteChannelNumber = this.ReadUInt32();
+            this.InitialWindowSize = this.ReadUInt32();
+            this.MaximumPacketSize = this.ReadUInt32();
         }
 
         /// <summary>
@@ -84,14 +67,9 @@
         protected override void SaveData()
         {
             base.SaveData();
-            Write(RemoteChannelNumber);
-            Write(InitialWindowSize);
-            Write(MaximumPacketSize);
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnChannelOpenConfirmationReceived(this);
+            this.Write(this.RemoteChannelNumber);
+            this.Write(this.InitialWindowSize);
+            this.Write(this.MaximumPacketSize);
         }
     }
 }

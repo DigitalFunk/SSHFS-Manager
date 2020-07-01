@@ -1,4 +1,6 @@
-﻿namespace Renci.SshNet.Messages.Authentication
+﻿using System.Collections.Generic;
+
+namespace Renci.SshNet.Messages.Authentication
 {
     /// <summary>
     /// Represents "publickey" SSH_MSG_USERAUTH_REQUEST message.
@@ -6,12 +8,26 @@
     public class RequestMessagePublicKey : RequestMessage
     {
         /// <summary>
-        /// Gets the name of the public key algorithm as ASCII encoded byte array.
+        /// Gets the name of the authentication method.
+        /// </summary>
+        /// <value>
+        /// The name of the method.
+        /// </value>
+        public override string MethodName
+        {
+            get
+            {
+                return "publickey";
+            }
+        }
+
+        /// <summary>
+        /// Gets the name of the public key algorithm.
         /// </summary>
         /// <value>
         /// The name of the public key algorithm.
         /// </value>
-        public byte[] PublicKeyAlgorithmName { get; private set; }
+        public string PublicKeyAlgorithmName { get; private set; }
 
         /// <summary>
         /// Gets the public key data.
@@ -27,33 +43,6 @@
         public byte[] Signature { get; set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 1; // Signature flag
-                capacity += 4; // PublicKeyAlgorithmName length
-                capacity += PublicKeyAlgorithmName.Length; // PublicKeyAlgorithmName
-                capacity += 4; // PublicKeyData length
-                capacity += PublicKeyData.Length; // PublicKeyData
-
-                if (Signature != null)
-                {
-                    capacity += 4; // Signature length
-                    capacity += Signature.Length; // Signature
-                }
-
-                return capacity;
-            }
-        }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="RequestMessagePublicKey"/> class.
         /// </summary>
         /// <param name="serviceName">Name of the service.</param>
@@ -61,10 +50,10 @@
         /// <param name="keyAlgorithmName">Name of private key algorithm.</param>
         /// <param name="keyData">Private key data.</param>
         public RequestMessagePublicKey(ServiceName serviceName, string username, string keyAlgorithmName, byte[] keyData)
-            : base(serviceName, username, "publickey")
+            : base(serviceName, username)
         {
-            PublicKeyAlgorithmName = Ascii.GetBytes(keyAlgorithmName);
-            PublicKeyData = keyData;
+            this.PublicKeyAlgorithmName = keyAlgorithmName;
+            this.PublicKeyData = keyData;
         }
 
         /// <summary>
@@ -78,7 +67,7 @@
         public RequestMessagePublicKey(ServiceName serviceName, string username, string keyAlgorithmName, byte[] keyData, byte[] signature)
             : this(serviceName, username, keyAlgorithmName, keyData)
         {
-            Signature = signature;
+            this.Signature = signature;
         }
 
         /// <summary>
@@ -88,11 +77,18 @@
         {
             base.SaveData();
 
-            Write(Signature != null);
-            WriteBinaryString(PublicKeyAlgorithmName);
-            WriteBinaryString(PublicKeyData);
-            if (Signature != null)
-                WriteBinaryString(Signature);
+            if (this.Signature == null)
+            {
+                this.Write(false);
+            }
+            else
+            {
+                this.Write(true);
+            }
+            this.Write(this.PublicKeyAlgorithmName);
+            this.WriteBinaryString(this.PublicKeyData);
+            if (this.Signature != null)
+                this.WriteBinaryString(this.Signature);
         }
     }
 }

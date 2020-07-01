@@ -1,4 +1,10 @@
-﻿namespace Renci.SshNet.Security.Cryptography
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Security.Cryptography;
+
+namespace Renci.SshNet.Security.Cryptography
 {
     /// <summary>
     /// Base class for signature implementations
@@ -10,14 +16,14 @@
         /// </summary>
         /// <param name="input">The input.</param>
         /// <param name="signature">The signature.</param>
-        /// <returns><c>True</c> if signature was successfully verified; otherwise <c>false</c>.</returns>
+        /// <returns></returns>
         public abstract bool Verify(byte[] input, byte[] signature);
 
         /// <summary>
         /// Creates the signature.
         /// </summary>
         /// <param name="input">The input.</param>
-        /// <returns>Signed input data.</returns>
+        /// <returns></returns>
         public abstract byte[] Sign(byte[] input);
     }
 }

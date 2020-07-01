@@ -1,5 +1,4 @@
 ﻿using System;
-using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Messages.Transport
 {
@@ -9,35 +8,13 @@ namespace Renci.SshNet.Messages.Transport
     [Message("SSH_MSG_SERVICE_REQUEST", 5)]
     public class ServiceRequestMessage : Message
     {
-        private readonly byte[] _serviceName;
-
         /// <summary>
         /// Gets the name of the service.
         /// </summary>
         /// <value>
         /// The name of the service.
         /// </value>
-        public ServiceName ServiceName
-        {
-            get { return _serviceName.ToServiceName(); }
-        }
-
-        /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // ServiceName length
-                capacity += _serviceName.Length; // ServiceName
-                return capacity;
-            }
-        }
+        public ServiceName ServiceName { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ServiceRequestMessage"/> class.
@@ -45,7 +22,7 @@ namespace Renci.SshNet.Messages.Transport
         /// <param name="serviceName">Name of the service.</param>
         public ServiceRequestMessage(ServiceName serviceName)
         {
-            _serviceName = serviceName.ToArray();
+            this.ServiceName = serviceName;
         }
 
         /// <summary>
@@ -61,12 +38,18 @@ namespace Renci.SshNet.Messages.Transport
         /// </summary>
         protected override void SaveData()
         {
-            WriteBinaryString(_serviceName);
-        }
+            switch (this.ServiceName)
+            {
+                case ServiceName.UserAuthentication:
+                    this.Write("ssh-userauth");
+                    break;
+                case ServiceName.Connection:
+                    this.Write("ssh-connection");
+                    break;
+                default:
+                    throw new NotSupportedException("Not supported service name");
+            }
 
-        internal override void Process(Session session)
-        {
-            session.OnServiceRequestReceived(this);
         }
     }
 }

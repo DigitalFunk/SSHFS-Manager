@@ -47,7 +47,7 @@ namespace Sshfs
         {
 
           
-            notifyIcon.Text = Text = String.Format("Sshfs Manager {0}", Assembly.GetEntryAssembly().GetName().Version);
+            notifyIcon.Text = Text = String.Format("SSHFS Manager", Assembly.GetEntryAssembly().GetName().Version);
             portBox.Minimum = IPEndPoint.MinPort;
             portBox.Maximum = IPEndPoint.MaxPort;
 
@@ -61,7 +61,7 @@ namespace Sshfs
                 openFileDialog.InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.Personal,
                                                                             Environment.SpecialFolderOption.DoNotVerify);*/
 
-            startupMenuItem.Checked = Utilities.IsAppRegistredForStarup();
+            startupMenuItem.Checked = Utilities.IsAppRegistredForStartup();
 
             // _drives.Presist("config.xml",true);
 
@@ -109,7 +109,7 @@ namespace Sshfs
             }
             else
             {
-                Utilities.UnregisterForStarup();
+                Utilities.UnregisterForStartup();
             }
         }
 

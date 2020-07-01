@@ -1,4 +1,9 @@
-﻿namespace Renci.SshNet.Messages.Connection
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Represents "eow@openssh.com" type channel request information
@@ -8,7 +13,7 @@
         /// <summary>
         /// Channel request name
         /// </summary>
-        public const string Name = "eow@openssh.com";
+        public const string NAME = "eow@openssh.com";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +23,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return Name; }
+            get { return EndOfWriteRequestInfo.NAME; }
         }
 
         /// <summary>
@@ -26,7 +31,7 @@
         /// </summary>
         public EndOfWriteRequestInfo()
         {
-            WantReply = false;
+            this.WantReply = false;
         }
     }
 }

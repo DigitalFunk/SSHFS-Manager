@@ -1,4 +1,11 @@
-﻿namespace Renci.SshNet.Security
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using Renci.SshNet.Common;
+using Renci.SshNet.Security.Cryptography;
+
+namespace Renci.SshNet.Security
 {
     /// <summary>
     /// Base class for SSH host algorithms.
@@ -19,16 +26,16 @@
         /// Initializes a new instance of the <see cref="HostAlgorithm"/> class.
         /// </summary>
         /// <param name="name">The host key name.</param>
-        protected HostAlgorithm(string name)
+        public HostAlgorithm(string name)
         {
-            Name = name;
+            this.Name = name;
         }
 
         /// <summary>
         /// Signs the specified data.
         /// </summary>
         /// <param name="data">The data.</param>
-        /// <returns>Signed data.</returns>
+        /// <returns></returns>
         public abstract byte[] Sign(byte[] data);
 
         /// <summary>
@@ -36,7 +43,7 @@
         /// </summary>
         /// <param name="data">The data.</param>
         /// <param name="signature">The signature.</param>
-        /// <returns><c>True</c> is signature was successfully verifies; otherwise <c>false</c>.</returns>
+        /// <returns></returns>
         public abstract bool VerifySignature(byte[] data, byte[] signature);
     }
 }

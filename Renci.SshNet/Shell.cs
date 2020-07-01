@@ -1,38 +1,53 @@
 ﻿using System;
+using System.Linq;
+using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Threading;
 using Renci.SshNet.Channels;
 using Renci.SshNet.Common;
-using System.Collections.Generic;
-using Renci.SshNet.Abstractions;
+using Renci.SshNet.Messages.Connection;
 
 namespace Renci.SshNet
 {
     /// <summary>
     /// Represents instance of the SSH shell object
     /// </summary>
-    public class Shell : IDisposable
+    public partial class Shell : IDisposable
     {
-        private readonly ISession _session;
-        private IChannelSession _channel;
+        private readonly Session _session;
+
+        private ChannelSession _channel;
+
         private EventWaitHandle _channelClosedWaitHandle;
+
         private Stream _input;
-        private readonly string _terminalName;
-        private readonly uint _columns;
-        private readonly uint _rows;
-        private readonly uint _width;
-        private readonly uint _height;
-        private readonly IDictionary<TerminalModes, uint> _terminalModes;
+
+        private string _terminalName;
+
+        private uint _columns;
+
+        private uint _rows;
+
+        private uint _width;
+
+        private uint _height;
+
+        private string _terminalMode;
+
         private EventWaitHandle _dataReaderTaskCompleted;
-        private readonly Stream _outputStream;
-        private readonly Stream _extendedOutputStream;
-        private readonly int _bufferSize;
+
+        private Stream _outputStream;
+
+        private Stream _extendedOutputStream;
+
+        private int _bufferSize;
 
         /// <summary>
         /// Gets a value indicating whether this shell is started.
         /// </summary>
         /// <value>
-        /// <c>true</c> if started is started; otherwise, <c>false</c>.
+        /// 	<c>true</c> if started is started; otherwise, <c>false</c>.
         /// </value>
         public bool IsStarted { get; private set; }
 
@@ -73,21 +88,21 @@ namespace Renci.SshNet
         /// <param name="rows">The rows.</param>
         /// <param name="width">The width.</param>
         /// <param name="height">The height.</param>
-        /// <param name="terminalModes">The terminal modes.</param>
+        /// <param name="terminalMode">The terminal mode.</param>
         /// <param name="bufferSize">Size of the buffer for output stream.</param>
-        internal Shell(ISession session, Stream input, Stream output, Stream extendedOutput, string terminalName, uint columns, uint rows, uint width, uint height, IDictionary<TerminalModes, uint> terminalModes, int bufferSize)
+        internal Shell(Session session, Stream input, Stream output, Stream extendedOutput, string terminalName, uint columns, uint rows, uint width, uint height, string terminalMode, int bufferSize)
         {
-            _session = session;
-            _input = input;
-            _outputStream = output;
-            _extendedOutputStream = extendedOutput;
-            _terminalName = terminalName;
-            _columns = columns;
-            _rows = rows;
-            _width = width;
-            _height = height;
-            _terminalModes = terminalModes;
-            _bufferSize = bufferSize;
+            this._session = session;
+            this._input = input;
+            this._outputStream = output;
+            this._extendedOutputStream = extendedOutput;
+            this._terminalName = terminalName;
+            this._columns = columns;
+            this._rows = rows;
+            this._width = width;
+            this._height = height;
+            this._terminalMode = terminalMode;
+            this._bufferSize = bufferSize;
         }
 
         /// <summary>
@@ -96,85 +111,76 @@ namespace Renci.SshNet
         /// <exception cref="SshException">Shell is started.</exception>
         public void Start()
         {
-            if (IsStarted)
+            if (this.IsStarted)
             {
                 throw new SshException("Shell is started.");
             }
 
-            if (Starting != null)
+            if (this.Starting != null)
             {
-                Starting(this, new EventArgs());
+                this.Starting(this, new EventArgs());
             }
 
-            _channel = _session.CreateChannelSession();
-            _channel.DataReceived += Channel_DataReceived;
-            _channel.ExtendedDataReceived += Channel_ExtendedDataReceived;
-            _channel.Closed += Channel_Closed;
-            _session.Disconnected += Session_Disconnected;
-            _session.ErrorOccured += Session_ErrorOccured;
+            this._channel = this._session.CreateChannel<ChannelSession>();
+            this._channel.DataReceived += Channel_DataReceived;
+            this._channel.ExtendedDataReceived += Channel_ExtendedDataReceived;
+            this._channel.Closed += Channel_Closed;
+            this._session.Disconnected += Session_Disconnected;
+            this._session.ErrorOccured += Session_ErrorOccured;
 
-            _channel.Open();
-            _channel.SendPseudoTerminalRequest(_terminalName, _columns, _rows, _width, _height, _terminalModes);
-            _channel.SendShellRequest();
+            this._channel.Open();
+            this._channel.SendPseudoTerminalRequest(this._terminalName, this._columns, this._rows, this._width, this._height, this._terminalMode);
+            this._channel.SendShellRequest();
 
-            _channelClosedWaitHandle = new AutoResetEvent(false);
+            this._channelClosedWaitHandle = new AutoResetEvent(false);
 
             //  Start input stream listener
-            _dataReaderTaskCompleted = new ManualResetEvent(false);
-            ThreadAbstraction.ExecuteThread(() =>
+            this._dataReaderTaskCompleted = new ManualResetEvent(false);
+            this.ExecuteThread(() =>
             {
                 try
                 {
-                    var buffer = new byte[_bufferSize];
+                    var buffer = new byte[this._bufferSize];
 
-                    while (_channel.IsOpen)
+                    while (this._channel.IsOpen)
                     {
-#if FEATURE_STREAM_TAP
-                        var readTask = _input.ReadAsync(buffer, 0, buffer.Length);
-                        var readWaitHandle = ((IAsyncResult) readTask).AsyncWaitHandle;
-
-                        if (WaitHandle.WaitAny(new[] {readWaitHandle, _channelClosedWaitHandle}) == 0)
+                        var asyncResult = this._input.BeginRead(buffer, 0, buffer.Length, delegate(IAsyncResult result)
                         {
-                            var read = readTask.Result;
-                            _channel.SendData(buffer, 0, read);
-                            continue;
-                        }
-#elif FEATURE_STREAM_APM
-                        var asyncResult = _input.BeginRead(buffer, 0, buffer.Length, result =>
+                            //  If input stream is closed and disposed already dont finish reading the stream
+                            if (this._input == null)
+                                return;
+
+                            var read = this._input.EndRead(result);
+                            if (read > 0)
                             {
-                                //  If input stream is closed and disposed already don't finish reading the stream
-                                if (_input == null)
-                                    return;
+                                this._session.SendMessage(new ChannelDataMessage(this._channel.RemoteChannelNumber, buffer.Take(read).ToArray()));
+                            }
 
-                                var read = _input.EndRead(result);
-                                _channel.SendData(buffer, 0, read);
-                            }, null);
+                        }, null);
 
-                        WaitHandle.WaitAny(new[] { asyncResult.AsyncWaitHandle, _channelClosedWaitHandle });
+                        EventWaitHandle.WaitAny(new WaitHandle[] { asyncResult.AsyncWaitHandle, this._channelClosedWaitHandle });
 
                         if (asyncResult.IsCompleted)
                             continue;
-#else
-                        #error Async receive is not implemented.
-#endif
-                        break;
+                        else
+                            break;
                     }
                 }
                 catch (Exception exp)
                 {
-                    RaiseError(new ExceptionEventArgs(exp));
+                    this.RaiseError(new ExceptionEventArgs(exp));
                 }
                 finally
                 {
-                    _dataReaderTaskCompleted.Set();
+                    this._dataReaderTaskCompleted.Set();
                 }
             });
 
-            IsStarted = true;
+            this.IsStarted = true;
 
-            if (Started != null)
+            if (this.Started != null)
             {
-                Started(this, new EventArgs());
+                this.Started(this, new EventArgs());
             }
         }
 
@@ -184,158 +190,143 @@ namespace Renci.SshNet
         /// <exception cref="SshException">Shell is not started.</exception>
         public void Stop()
         {
-            if (!IsStarted)
+            if (!this.IsStarted)
             {
                 throw new SshException("Shell is not started.");
             }
 
-            if (_channel != null)
+            //  If channel is open then close it to cause Channel_Closed method to be called
+            if (this._channel != null && this._channel.IsOpen)
             {
-                _channel.Dispose();
+                this._channel.Close();
             }
         }
 
         private void Session_ErrorOccured(object sender, ExceptionEventArgs e)
         {
-            RaiseError(e);
+            this.RaiseError(e);
         }
 
         private void RaiseError(ExceptionEventArgs e)
         {
-            var handler = ErrorOccurred;
-            if (handler != null)
+            if (this.ErrorOccurred != null)
             {
-                handler(this, e);
+                this.ErrorOccurred(this, e);
             }
         }
 
-        private void Session_Disconnected(object sender, EventArgs e)
+        private void Session_Disconnected(object sender, System.EventArgs e)
         {
-            Stop();
+            this.Stop();
         }
 
-        private void Channel_ExtendedDataReceived(object sender, ChannelExtendedDataEventArgs e)
+        private void Channel_ExtendedDataReceived(object sender, Common.ChannelDataEventArgs e)
         {
-            if (_extendedOutputStream != null)
+            if (this._extendedOutputStream != null)
             {
-                _extendedOutputStream.Write(e.Data, 0, e.Data.Length);
+                this._extendedOutputStream.Write(e.Data, 0, e.Data.Length);
             }
         }
 
-        private void Channel_DataReceived(object sender, ChannelDataEventArgs e)
+        private void Channel_DataReceived(object sender, Common.ChannelDataEventArgs e)
         {
-            if (_outputStream != null)
+            if (this._outputStream != null)
             {
-                _outputStream.Write(e.Data, 0, e.Data.Length);
+                this._outputStream.Write(e.Data, 0, e.Data.Length);
             }
         }
 
-        private void Channel_Closed(object sender, ChannelEventArgs e)
+        private void Channel_Closed(object sender, Common.ChannelEventArgs e)
         {
-            if (Stopping != null)
-            {
-                //  Handle event on different thread
-                ThreadAbstraction.ExecuteThread(() => Stopping(this, new EventArgs()));
-            }
-
-            _channel.Dispose();
-            _channelClosedWaitHandle.Set();
-
-            _input.Dispose();
-            _input = null;
-
-            _dataReaderTaskCompleted.WaitOne(_session.ConnectionInfo.Timeout);
-            _dataReaderTaskCompleted.Dispose();
-            _dataReaderTaskCompleted = null;
-
-            _channel.DataReceived -= Channel_DataReceived;
-            _channel.ExtendedDataReceived -= Channel_ExtendedDataReceived;
-            _channel.Closed -= Channel_Closed;
-
-            UnsubscribeFromSessionEvents(_session);
-
-            if (Stopped != null)
+            if (this.Stopping != null)
             {
                 //  Handle event on different thread
-                ThreadAbstraction.ExecuteThread(() => Stopped(this, new EventArgs()));
+                this.ExecuteThread(() => { this.Stopping(this, new EventArgs()); });
             }
 
-            _channel = null;
+            if (this._channel.IsOpen)
+                this._channel.Close();
+
+            this._channelClosedWaitHandle.Set();
+
+            this._input.Dispose();
+            this._input = null;
+
+            this._dataReaderTaskCompleted.WaitOne(this._session.ConnectionInfo.Timeout);
+            this._dataReaderTaskCompleted.Dispose();
+            this._dataReaderTaskCompleted = null;
+
+            this._channel.DataReceived -= Channel_DataReceived;
+            this._channel.ExtendedDataReceived -= Channel_ExtendedDataReceived;
+            this._channel.Closed -= Channel_Closed;
+            this._session.Disconnected -= Session_Disconnected;
+            this._session.ErrorOccured -= Session_ErrorOccured;
+
+            if (this.Stopped != null)
+            {
+                //  Handle event on different thread
+                this.ExecuteThread(() => { this.Stopped(this, new EventArgs()); });
+            }
+
+            this._channel = null;
         }
 
-        /// <summary>
-        /// Unsubscribes the current <see cref="Shell"/> from session events.
-        /// </summary>
-        /// <param name="session">The session.</param>
-        /// <remarks>
-        /// Does nothing when <paramref name="session"/> is <c>null</c>.
-        /// </remarks>
-        private void UnsubscribeFromSessionEvents(ISession session)
-        {
-            if (session == null)
-                return;
-
-            session.Disconnected -= Session_Disconnected;
-            session.ErrorOccured -= Session_ErrorOccured;
-        }
+        partial void ExecuteThread(Action action);
 
         #region IDisposable Members
 
-        private bool _disposed;
+        private bool _disposed = false;
 
         /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
+        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged ResourceMessages.
         /// </summary>
         public void Dispose()
         {
             Dispose(true);
+
             GC.SuppressFinalize(this);
         }
 
         /// <summary>
         /// Releases unmanaged and - optionally - managed resources
         /// </summary>
-        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged ResourceMessages.</param>
         protected virtual void Dispose(bool disposing)
         {
-            if (_disposed)
-                return;
-
-            if (disposing)
+            // Check to see if Dispose has already been called.
+            if (!this._disposed)
             {
-                UnsubscribeFromSessionEvents(_session);
-
-                var channelClosedWaitHandle = _channelClosedWaitHandle;
-                if (channelClosedWaitHandle != null)
+                // If disposing equals true, dispose all managed
+                // and unmanaged ResourceMessages.
+                if (disposing)
                 {
-                    channelClosedWaitHandle.Dispose();
-                    _channelClosedWaitHandle = null;
+                    if (this._channelClosedWaitHandle != null)
+                    {
+                        this._channelClosedWaitHandle.Dispose();
+                        this._channelClosedWaitHandle = null;
+                    }
+
+                    if (this._dataReaderTaskCompleted != null)
+                    {
+                        this._dataReaderTaskCompleted.Dispose();
+                        this._dataReaderTaskCompleted = null;
+                    }
                 }
 
-                var channel = _channel;
-                if (channel != null)
-                {
-                    channel.Dispose();
-                    _channel = null;
-                }
-
-                var dataReaderTaskCompleted = _dataReaderTaskCompleted;
-                if (dataReaderTaskCompleted != null)
-                {
-                    dataReaderTaskCompleted.Dispose();
-                    _dataReaderTaskCompleted = null;
-                }
-
-                _disposed = true;
+                // Note disposing has been done.
+                this._disposed = true;
             }
         }
 
         /// <summary>
         /// Releases unmanaged resources and performs other cleanup operations before the
-        /// <see cref="Shell"/> is reclaimed by garbage collection.
+        /// <see cref="Session"/> is reclaimed by garbage collection.
         /// </summary>
         ~Shell()
         {
+            // Do not re-create Dispose clean-up code here.
+            // Calling Dispose(false) is optimal in terms of
+            // readability and maintainability.
             Dispose(false);
         }
 

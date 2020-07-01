@@ -1,4 +1,7 @@
-﻿namespace Renci.SshNet.Messages.Connection
+﻿using System;
+using System.Globalization;
+
+namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Represents SSH_MSG_CHANNEL_REQUEST message.
@@ -6,47 +9,18 @@
     [Message("SSH_MSG_CHANNEL_REQUEST", 98)]
     public class ChannelRequestMessage : ChannelMessage
     {
-        private string _requestName;
-        private byte[] _requestNameBytes;
-
         /// <summary>
         /// Gets the name of the request.
         /// </summary>
         /// <value>
         /// The name of the request.
         /// </value>
-        public string RequestName
-        {
-            get { return _requestName; }
-            private set
-            {
-                _requestName = value;
-                _requestNameBytes = Ascii.GetBytes(value);
-            }
-        }
+        public string RequestName { get; private set; }
 
         /// <summary>
         /// Gets channel request data.
         /// </summary>
         public byte[] RequestData { get; private set; }
-
-        /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // RequestName length
-                capacity += _requestNameBytes.Length; // RequestName
-                capacity += RequestData.Length; // RequestData
-                return capacity;
-            }
-        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelRequestMessage"/> class.
@@ -59,13 +33,13 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelRequestMessage"/> class.
         /// </summary>
-        /// <param name="localChannelNumber">The local channel number.</param>
+        /// <param name="localChannelName">Name of the local channel.</param>
         /// <param name="info">The info.</param>
-        public ChannelRequestMessage(uint localChannelNumber, RequestInfo info)
-            : base(localChannelNumber)
+        public ChannelRequestMessage(uint localChannelName, RequestInfo info)
         {
-            RequestName = info.RequestName;
-            RequestData = info.GetBytes();
+            this.LocalChannelNumber = localChannelName;
+            this.RequestName = info.RequestName;
+            this.RequestData = info.GetBytes();
         }
 
         /// <summary>
@@ -75,9 +49,8 @@
         {
             base.LoadData();
 
-            _requestNameBytes = ReadBinary();
-            _requestName = Ascii.GetString(_requestNameBytes, 0, _requestNameBytes.Length);
-            RequestData = ReadBytes();
+            this.RequestName = this.ReadString();
+            this.RequestData = this.ReadBytes();
         }
 
         /// <summary>
@@ -87,13 +60,8 @@
         {
             base.SaveData();
 
-            WriteBinaryString(_requestNameBytes);
-            Write(RequestData);
-        }
-
-        internal override void Process(Session session)
-        {
-            session.OnChannelRequestReceived(this);
+            this.Write(this.RequestName);
+            this.Write(this.RequestData);
         }
     }
 }

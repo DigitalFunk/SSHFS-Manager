@@ -75,7 +75,7 @@ namespace Sshfs
 
         public static IEnumerable<char> GetAvailableDrives()
         {
-            return Enumerable.Range('D', 22).Select(value => (char) value).Except(
+            return Enumerable.Range('D', 23).Select(value => (char) value).Except(
                 Directory.GetLogicalDrives().Select(drive => drive[0]));
         }
 
@@ -87,14 +87,14 @@ namespace Sshfs
                                                                                      Application.ExecutablePath);
         }
 
-        public static void UnregisterForStarup()
+        public static void UnregisterForStartup()
         {
             Registry.CurrentUser.OpenSubKey
                 ("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true).DeleteValue(Application.ProductName);
         }
 
 
-        public static bool IsAppRegistredForStarup()
+        public static bool IsAppRegistredForStartup()
         {
             return (Registry.CurrentUser.OpenSubKey
                         ("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", false).GetValue(Application.ProductName)

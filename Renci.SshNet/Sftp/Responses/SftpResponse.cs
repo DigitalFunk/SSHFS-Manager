@@ -1,28 +1,24 @@
-﻿namespace Renci.SshNet.Sftp.Responses
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Renci.SshNet.Sftp.Responses
 {
     internal abstract class SftpResponse : SftpMessage
     {
-        public uint ResponseId { get; set; }
-
-        public uint ProtocolVersion { get; private set; }
-
-        protected SftpResponse(uint protocolVersion)
-        {
-            ProtocolVersion = protocolVersion;
-        }
+        public uint ResponseId { get; private set; }
 
         protected override void LoadData()
         {
             base.LoadData();
             
-            ResponseId = ReadUInt32();
+            this.ResponseId = this.ReadUInt32();
         }
 
         protected override void SaveData()
         {
-            base.SaveData();
-
-            Write(ResponseId);
+            throw new InvalidOperationException("Response cannot be saved.");
         }
     }
 }

@@ -1,4 +1,9 @@
-﻿namespace Renci.SshNet.Sftp.Responses
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace Renci.SshNet.Sftp.Responses
 {
     internal class SftpAttrsResponse : SftpResponse
     {
@@ -9,15 +14,10 @@
 
         public SftpFileAttributes Attributes { get; private set; }
 
-        public SftpAttrsResponse(uint protocolVersion)
-            : base(protocolVersion)
-        {
-        }
-
         protected override void LoadData()
         {
             base.LoadData();
-            Attributes = ReadAttributes();
+            this.Attributes = this.ReadAttributes();
         }
     }
 }

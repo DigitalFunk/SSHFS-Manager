@@ -1,9 +1,12 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace Renci.SshNet.Security.Cryptography
 {
     /// <summary>
-    /// Base class of stream cipher algorithms.
+    /// 
     /// </summary>
     public abstract class StreamCipher : SymmetricCipher
     {
@@ -11,7 +14,7 @@ namespace Renci.SshNet.Security.Cryptography
         /// Initializes a new instance of the <see cref="StreamCipher"/> class.
         /// </summary>
         /// <param name="key">The key.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="key"/> is <c>null</c>.</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="key"/> is null.</exception>
         protected StreamCipher(byte[] key)
             : base(key)
         {

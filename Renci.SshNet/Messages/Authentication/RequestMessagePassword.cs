@@ -1,4 +1,6 @@
-﻿namespace Renci.SshNet.Messages.Authentication
+﻿using System.Text;
+
+namespace Renci.SshNet.Messages.Authentication
 {
     /// <summary>
     /// Represents "password" SSH_MSG_USERAUTH_REQUEST message.
@@ -6,39 +8,28 @@
     internal class RequestMessagePassword : RequestMessage
     {
         /// <summary>
+        /// Gets the name of the authentication method.
+        /// </summary>
+        /// <value>
+        /// The name of the method.
+        /// </value>
+        public override string MethodName
+        {
+            get
+            {
+                return "password";
+            }
+        }
+
+        /// <summary>
         /// Gets authentication password.
         /// </summary>
-        public byte[] Password { get; private set; }
+        public string Password { get; private set; }
 
         /// <summary>
         /// Gets new authentication password.
         /// </summary>
-        public byte[] NewPassword { get; private set; }
-
-        /// <summary>
-        /// Gets the size of the message in bytes.
-        /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 1; // NewPassword flag
-                capacity += 4; // Password length
-                capacity += Password.Length; // Password
-
-                if (NewPassword != null)
-                {
-                    capacity += 4; // NewPassword length
-                    capacity += NewPassword.Length; // NewPassword
-                }
-
-                return capacity;
-            }
-        }
+        public string NewPassword { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestMessagePassword"/> class.
@@ -46,10 +37,10 @@
         /// <param name="serviceName">Name of the service.</param>
         /// <param name="username">Authentication username.</param>
         /// <param name="password">Authentication password.</param>
-        public RequestMessagePassword(ServiceName serviceName, string username, byte[] password)
-            : base(serviceName, username, "password")
+        public RequestMessagePassword(ServiceName serviceName, string username, string password)
+            : base(serviceName, username)
         {
-            Password = password;
+            this.Password = password ?? string.Empty;
         }
 
         /// <summary>
@@ -59,10 +50,10 @@
         /// <param name="username">Authentication username.</param>
         /// <param name="password">Authentication password.</param>
         /// <param name="newPassword">New authentication password.</param>
-        public RequestMessagePassword(ServiceName serviceName, string username, byte[] password, byte[] newPassword)
+        public RequestMessagePassword(ServiceName serviceName, string username, string password, string newPassword)
             : this(serviceName, username, password)
         {
-            NewPassword = newPassword;
+            this.NewPassword = newPassword ?? string.Empty;
         }
 
         /// <summary>
@@ -72,11 +63,13 @@
         {
             base.SaveData();
 
-            Write(NewPassword != null);
-            WriteBinaryString(Password);
-            if (NewPassword != null)
+            this.Write(!string.IsNullOrEmpty(this.NewPassword));
+
+            this.Write(this.Password, Encoding.UTF8);
+
+            if (!string.IsNullOrEmpty(this.NewPassword))
             {
-                WriteBinaryString(NewPassword);
+                this.Write(this.NewPassword, Encoding.UTF8);
             }
         }
     }

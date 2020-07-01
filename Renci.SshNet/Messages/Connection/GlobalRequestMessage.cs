@@ -1,4 +1,6 @@
-﻿namespace Renci.SshNet.Messages.Connection
+﻿using System;
+
+namespace Renci.SshNet.Messages.Connection
 {
     /// <summary>
     /// Represents SSH_MSG_GLOBAL_REQUEST message.
@@ -6,18 +8,13 @@
     [Message("SSH_MSG_GLOBAL_REQUEST", 80)]
     public class GlobalRequestMessage : Message
     {
-        private byte[] _requestName;
-
         /// <summary>
         /// Gets the name of the request.
         /// </summary>
         /// <value>
         /// The name of the request.
         /// </value>
-        public string RequestName
-        {
-            get { return Ascii.GetString(_requestName, 0, _requestName.Length); }
-        }
+        public GlobalRequestName RequestName { get; private set; }
 
         /// <summary>
         /// Gets a value indicating whether message reply should be sent..
@@ -28,28 +25,22 @@
         public bool WantReply { get; private set; }
 
         /// <summary>
-        /// Gets the size of the message in bytes.
+        /// Gets the address to bind to.
         /// </summary>
-        /// <value>
-        /// The size of the messages in bytes.
-        /// </value>
-        protected override int BufferCapacity
-        {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // RequestName length
-                capacity += _requestName.Length; // RequestName
-                capacity += 1; // WantReply
-                return capacity;
-            }
-        }
+        public string AddressToBind { get; private set; }
+        //  TODO:   Extract AddressToBind property to be in different class and GlobalREquestMessage to be a base class fo it.
+
+        /// <summary>
+        /// Gets port number to bind to.
+        /// </summary>
+        public UInt32 PortToBind { get; private set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="GlobalRequestMessage"/> class.
         /// </summary>
         public GlobalRequestMessage()
         {
+
         }
 
         /// <summary>
@@ -57,10 +48,24 @@
         /// </summary>
         /// <param name="requestName">Name of the request.</param>
         /// <param name="wantReply">if set to <c>true</c> [want reply].</param>
-        internal GlobalRequestMessage(byte[] requestName, bool wantReply)
+        public GlobalRequestMessage(GlobalRequestName requestName, bool wantReply)
         {
-            _requestName = requestName;
-            WantReply = wantReply;
+            this.RequestName = requestName;
+            this.WantReply = wantReply;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="GlobalRequestMessage"/> class.
+        /// </summary>
+        /// <param name="requestName">Name of the request.</param>
+        /// <param name="wantReply">if set to <c>true</c> [want reply].</param>
+        /// <param name="addressToBind">The address to bind.</param>
+        /// <param name="portToBind">The port to bind.</param>
+        public GlobalRequestMessage(GlobalRequestName requestName, bool wantReply, string addressToBind, uint portToBind)
+            : this(requestName, wantReply)
+        {
+            this.AddressToBind = addressToBind;
+            this.PortToBind = portToBind;
         }
 
         /// <summary>
@@ -68,8 +73,22 @@
         /// </summary>
         protected override void LoadData()
         {
-            _requestName = ReadBinary();
-            WantReply = ReadBoolean();
+            var requestName = this.ReadString();
+            switch (requestName)
+            {
+                case "tcpip-forward":
+                    this.RequestName = GlobalRequestName.TcpIpForward;
+                    break;
+                case "cancel-tcpip-forward":
+                    this.RequestName = GlobalRequestName.CancelTcpIpForward;
+                    break;
+                default:
+                    break;
+            }
+
+            this.WantReply = this.ReadBoolean();
+            this.AddressToBind = this.ReadString();
+            this.PortToBind = this.ReadUInt32();
         }
 
         /// <summary>
@@ -77,13 +96,30 @@
         /// </summary>
         protected override void SaveData()
         {
-            WriteBinaryString(_requestName);
-            Write(WantReply);
-        }
+            switch (this.RequestName)
+            {
+                case GlobalRequestName.TcpIpForward:
+                    this.Write("tcpip-forward");
+                    break;
+                case GlobalRequestName.CancelTcpIpForward:
+                    this.Write("cancel-tcpip-forward");
+                    break;
+                default:
+                    break;
+            }
 
-        internal override void Process(Session session)
-        {
-            session.OnGlobalRequestReceived(this);
+            this.Write(this.WantReply);
+
+            switch (this.RequestName)
+            {
+                case GlobalRequestName.TcpIpForward:
+                case GlobalRequestName.CancelTcpIpForward:
+                    this.Write(this.AddressToBind);
+                    this.Write(this.PortToBind);
+                    break;
+                default:
+                    break;
+            }
         }
     }
 }

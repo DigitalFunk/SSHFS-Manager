@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using Renci.SshNet.Sftp.Responses;
 
 namespace Renci.SshNet.Sftp.Requests
@@ -12,88 +15,32 @@ namespace Renci.SshNet.Sftp.Requests
 
         public byte[] Handle { get; private set; }
 
-        /// <summary>
-        /// Gets the zero-based offset (in bytes) relative to the beginning of the file that the write
-        /// must start at.
-        /// </summary>
-        /// <value>
-        /// The zero-based offset (in bytes) relative to the beginning of the file that the write must
-        /// start at.
-        /// </value>
-        public ulong ServerFileOffset { get; private set; }
+        public UInt64 Offset { get; private set; }
 
-        /// <summary>
-        /// Gets the buffer holding the data to write.
-        /// </summary>
-        /// <value>
-        /// The buffer holding the data to write.
-        /// </value>
         public byte[] Data { get; private set; }
 
-        /// <summary>
-        /// Gets the zero-based offset in <see cref="Data" /> at which to begin taking bytes to
-        /// write.
-        /// </summary>
-        /// <value>
-        /// The zero-based offset in <see cref="Data" /> at which to begin taking bytes to write.
-        /// </value>
-        public int Offset { get; private set; }
-
-        /// <summary>
-        /// Gets the length (in bytes) of the data to write.
-        /// </summary>
-        /// <value>
-        /// The length (in bytes) of the data to write.
-        /// </value>
-        public int Length { get; private set; }
-
-        protected override int BufferCapacity
+        public SftpWriteRequest(uint requestId, byte[] handle, UInt64 offset, byte[] data, Action<SftpStatusResponse> statusAction)
+            : base(requestId, statusAction)
         {
-            get
-            {
-                var capacity = base.BufferCapacity;
-                capacity += 4; // Handle length
-                capacity += Handle.Length; // Handle
-                capacity += 8; // ServerFileOffset length
-                capacity += 4; // Data length
-                capacity += Length; // Data
-                return capacity;
-            }
-        }
-
-        public SftpWriteRequest(uint protocolVersion,
-                                uint requestId,
-                                byte[] handle,
-                                ulong serverFileOffset,
-                                byte[] data,
-                                int offset,
-                                int length,
-                                Action<SftpStatusResponse> statusAction)
-            : base(protocolVersion, requestId, statusAction)
-        {
-            Handle = handle;
-            ServerFileOffset = serverFileOffset;
-            Data = data;
-            Offset = offset;
-            Length = length;
+            this.Handle = handle;
+            this.Offset = offset;
+            this.Data = data;
         }
 
         protected override void LoadData()
         {
             base.LoadData();
-            Handle = ReadBinary();
-            ServerFileOffset = ReadUInt64();
-            Data = ReadBinary();
-            Offset = 0;
-            Length = Data.Length;
+            this.Handle = this.ReadBinaryString();
+            this.Offset = this.ReadUInt64();
+            this.Data = this.ReadBinaryString();
         }
 
         protected override void SaveData()
         {
             base.SaveData();
-            WriteBinaryString(Handle);
-            Write(ServerFileOffset);
-            WriteBinary(Data, Offset, Length);
+            this.WriteBinaryString(this.Handle);
+            this.Write(this.Offset);
+            this.WriteBinaryString(this.Data);
         }
     }
 }

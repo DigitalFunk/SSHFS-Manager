@@ -8,7 +8,7 @@
         /// <summary>
         /// Channel request name.
         /// </summary>
-        public const string Name = "exit-status";
+        public const string NAME = "exit-status";
 
         /// <summary>
         /// Gets the name of the request.
@@ -18,7 +18,7 @@
         /// </value>
         public override string RequestName
         {
-            get { return Name; }
+            get { return ExitStatusRequestInfo.NAME; }
         }
 
         /// <summary>
@@ -26,22 +26,12 @@
         /// </summary>
         public uint ExitStatus { get; private set; }
 
-        protected override int BufferCapacity
-        {
-            get
-            {
-                 var capacity = base.BufferCapacity;
-                capacity += 4; // ExitStatus
-                return capacity;
-            }
-        }
-
         /// <summary>
         /// Initializes a new instance of the <see cref="ExitStatusRequestInfo"/> class.
         /// </summary>
         public ExitStatusRequestInfo()
         {
-            WantReply = false;
+            this.WantReply = false;
         }
 
         /// <summary>
@@ -51,7 +41,7 @@
         public ExitStatusRequestInfo(uint exitStatus)
             : this()
         {
-            ExitStatus = exitStatus;
+            this.ExitStatus = exitStatus;
         }
 
         /// <summary>
@@ -61,7 +51,7 @@
         {
             base.LoadData();
 
-            ExitStatus = ReadUInt32();
+            this.ExitStatus = this.ReadUInt32();
         }
 
         /// <summary>
@@ -71,7 +61,7 @@
         {
             base.SaveData();
 
-            Write(ExitStatus);
+            this.Write(this.ExitStatus);
         }
     }
 }

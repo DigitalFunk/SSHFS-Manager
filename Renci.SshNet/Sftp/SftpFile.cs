@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security;
 using System.Globalization;
-using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Sftp
 {
@@ -9,7 +11,7 @@ namespace Renci.SshNet.Sftp
     /// </summary>
     public class SftpFile
     {
-        private readonly ISftpSession _sftpSession;
+        private SftpSession _sftpSession;
 
         /// <summary>
         /// Gets the file attributes.
@@ -22,24 +24,21 @@ namespace Renci.SshNet.Sftp
         /// <param name="sftpSession">The SFTP session.</param>
         /// <param name="fullName">Full path of the directory or file.</param>
         /// <param name="attributes">Attributes of the directory or file.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="sftpSession"/> or <paramref name="fullName"/> is <c>null</c>.</exception>
-        internal SftpFile(ISftpSession sftpSession, string fullName, SftpFileAttributes attributes)
+        /// <exception cref="ArgumentNullException"><paramref name="sftpSession"/> or <paramref name="fullName"/> is null.</exception>
+        internal SftpFile(SftpSession sftpSession, string fullName, SftpFileAttributes attributes)
         {
-            if (sftpSession == null)
-                throw new SshConnectionException("Client not connected.");
-
             if (attributes == null)
                 throw new ArgumentNullException("attributes");
 
             if (fullName == null)
                 throw new ArgumentNullException("fullName");
 
-            _sftpSession = sftpSession;
-            Attributes = attributes;
+            this._sftpSession = sftpSession;
+            this.Attributes = attributes;
 
-            Name = fullName.Substring(fullName.LastIndexOf('/') + 1);
+            this.Name = fullName.Substring(fullName.LastIndexOf('/') + 1);
 
-            FullName = fullName;
+            this.FullName = fullName;
         }
 
         /// <summary>
@@ -63,11 +62,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.LastAccessTime;
-            }
-            set
-            {
-                Attributes.LastAccessTime = value;
+                return this.Attributes.LastAccessTime;
             }
         }
 
@@ -81,47 +76,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.LastWriteTime;
-            }
-            set
-            {
-                Attributes.LastWriteTime = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the time, in coordinated universal time (UTC), the current file or directory was last accessed.
-        /// </summary>
-        /// <value>
-        /// The time that the current file or directory was last accessed.
-        /// </value>
-        public DateTime LastAccessTimeUtc
-        {
-            get
-            {
-                return Attributes.LastAccessTime.ToUniversalTime();
-            }
-            set
-            {
-                Attributes.LastAccessTime = value.ToLocalTime();
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets the time, in coordinated universal time (UTC), when the current file or directory was last written to.
-        /// </summary>
-        /// <value>
-        /// The time the current file was last written.
-        /// </value>
-        public DateTime LastWriteTimeUtc
-        {
-            get
-            {
-                return Attributes.LastWriteTime.ToUniversalTime();
-            }
-            set
-            {
-                Attributes.LastWriteTime = value.ToLocalTime();
+                return this.Attributes.LastWriteTime;
             }
         }
 
@@ -135,7 +90,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.Size;
+                return this.Attributes.Size;
             }
         }
 
@@ -149,11 +104,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.UserId;
+                return this.Attributes.UserId;
             }
             set
             {
-                Attributes.UserId = value;
+                this.Attributes.UserId = value;
             }
         }
 
@@ -167,11 +122,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.GroupId;
+                return this.Attributes.GroupId;
             }
             set
             {
-                Attributes.GroupId = value;
+                this.Attributes.GroupId = value;
             }
         }
 
@@ -185,7 +140,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsSocket;
+                return this.Attributes.IsSocket;
             }
         }
 
@@ -199,7 +154,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsSymbolicLink;
+                return this.Attributes.IsSymbolicLink;
             }
         }
 
@@ -213,7 +168,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsRegularFile;
+                return this.Attributes.IsRegularFile;
             }
         }
 
@@ -227,7 +182,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsBlockDevice;
+                return this.Attributes.IsBlockDevice;
             }
         }
 
@@ -241,7 +196,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsDirectory;
+                return this.Attributes.IsDirectory;
             }
         }
 
@@ -255,7 +210,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsCharacterDevice;
+                return this.Attributes.IsCharacterDevice;
             }
         }
 
@@ -269,7 +224,7 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.IsNamedPipe;
+                return this.Attributes.IsNamedPipe;
             }
         }
 
@@ -283,11 +238,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.OwnerCanRead;
+                return this.Attributes.OwnerCanRead;
             }
             set
             {
-                Attributes.OwnerCanRead = value;
+                this.Attributes.OwnerCanRead = value;
             }
         }
 
@@ -301,11 +256,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.OwnerCanWrite;
+                return this.Attributes.OwnerCanWrite;
             }
             set
             {
-                Attributes.OwnerCanWrite = value;
+                this.Attributes.OwnerCanWrite = value;
             }
         }
 
@@ -319,11 +274,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.OwnerCanExecute;
+                return this.Attributes.OwnerCanExecute;
             }
             set
             {
-                Attributes.OwnerCanExecute = value;
+                this.Attributes.OwnerCanExecute = value;
             }
         }
 
@@ -337,11 +292,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.GroupCanRead;
+                return this.Attributes.GroupCanRead;
             }
             set
             {
-                Attributes.GroupCanRead = value;
+                this.Attributes.GroupCanRead = value;
             }
         }
 
@@ -355,11 +310,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.GroupCanWrite;
+                return this.Attributes.GroupCanWrite;
             }
             set
             {
-                Attributes.GroupCanWrite = value;
+                this.Attributes.GroupCanWrite = value;
             }
         }
 
@@ -373,11 +328,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.GroupCanExecute;
+                return this.Attributes.GroupCanExecute;
             }
             set
             {
-                Attributes.GroupCanExecute = value;
+                this.Attributes.GroupCanExecute = value;
             }
         }
 
@@ -391,11 +346,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.OthersCanRead;
+                return this.Attributes.OthersCanRead;
             }
             set
             {
-                Attributes.OthersCanRead = value;
+                this.Attributes.OthersCanRead = value;
             }
         }
 
@@ -409,11 +364,11 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.OthersCanWrite;
+                return this.Attributes.OthersCanWrite;
             }
             set
             {
-                Attributes.OthersCanWrite = value;
+                this.Attributes.OthersCanWrite = value;
             }
         }
 
@@ -427,13 +382,21 @@ namespace Renci.SshNet.Sftp
         {
             get
             {
-                return Attributes.OthersCanExecute;
+                return this.Attributes.OthersCanExecute;
             }
             set
             {
-                Attributes.OthersCanExecute = value;
+                this.Attributes.OthersCanExecute = value;
             }
         }
+
+        /// <summary>
+        /// Gets the extension part of the file.
+        /// </summary>
+        /// <value>
+        /// File extensions.
+        /// </value>
+        public IDictionary<string, string> Extensions { get; private set; }
 
         /// <summary>
         /// Sets file  permissions.
@@ -441,9 +404,9 @@ namespace Renci.SshNet.Sftp
         /// <param name="mode">The mode.</param>
         public void SetPermissions(short mode)
         {
-            Attributes.SetPermissions(mode);
+            this.Attributes.SetPermissions(mode);
 
-            UpdateStatus();
+            this.UpdateStatus();
         }
 
         /// <summary>
@@ -451,13 +414,13 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         public void Delete()
         {
-            if (IsDirectory)
+            if (this.IsDirectory)
             {
-                _sftpSession.RequestRmDir(FullName);
+                this._sftpSession.RequestRmDir(this.FullName);
             }
             else
             {
-                _sftpSession.RequestRemove(FullName);
+                this._sftpSession.RequestRemove(this.FullName);
             }
         }
 
@@ -465,18 +428,15 @@ namespace Renci.SshNet.Sftp
         /// Moves a specified file to a new location on remote machine, providing the option to specify a new file name.
         /// </summary>
         /// <param name="destFileName">The path to move the file to, which can specify a different file name.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="destFileName"/> is <c>null</c>.</exception>
         public void MoveTo(string destFileName)
         {
-            if (destFileName == null)
-                throw new ArgumentNullException("destFileName");
-            _sftpSession.RequestRename(FullName, destFileName);
+            this._sftpSession.RequestRename(this.FullName, destFileName);
 
-            var fullPath = _sftpSession.GetCanonicalPath(destFileName);
+            var fullPath = this._sftpSession.GetCanonicalPath(destFileName);
 
-            Name = fullPath.Substring(fullPath.LastIndexOf('/') + 1);
+            this.Name = fullPath.Substring(fullPath.LastIndexOf('/') + 1);
 
-            FullName = fullPath;
+            this.FullName = fullPath;
         }
 
         /// <summary>
@@ -484,7 +444,7 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         public void UpdateStatus()
         {
-            _sftpSession.RequestSetStat(FullName, Attributes);
+            this._sftpSession.RequestSetStat(this.FullName, this.Attributes);
         }
 
         /// <summary>
@@ -495,7 +455,7 @@ namespace Renci.SshNet.Sftp
         /// </returns>
         public override string ToString()
         {
-            return string.Format(CultureInfo.CurrentCulture, "Name {0}, Length {1}, User ID {2}, Group ID {3}, Accessed {4}, Modified {5}", Name, Length, UserId, GroupId, LastAccessTime, LastWriteTime);
+            return string.Format(CultureInfo.CurrentCulture, "Name {0}, Length {1}, User ID {2}, Group ID {3}, Accessed {4}, Modified {5}", this.Name, this.Length, this.UserId, this.GroupId, this.LastAccessTime, this.LastWriteTime);
         }
     }
 }

@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
 namespace Renci.SshNet.Common
 {
@@ -22,7 +25,7 @@ namespace Renci.SshNet.Common
             if (identifiers.Length < 2)
                 throw new ArgumentException("identifiers");
 
-            Identifiers = identifiers;
+            this.Identifiers = identifiers;
         }
     }
 }

@@ -1,114 +1,121 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.IO;
 using System.Threading;
-using System.Diagnostics.CodeAnalysis;
-using Renci.SshNet.Common;
 
 namespace Renci.SshNet.Sftp
 {
     /// <summary>
-    /// Exposes a <see cref="Stream"/> around a remote SFTP file, supporting both synchronous and asynchronous read and write operations.
+    /// Exposes a System.IO.Stream around a remote SFTP file, supporting both synchronous and asynchronous read and write operations.
     /// </summary>
     public class SftpFileStream : Stream
     {
         //  TODO:   Add security method to set userid, groupid and other permission settings
         // Internal state.
         private byte[] _handle;
-        private ISftpSession _session;
+        private FileAccess _access;
+        private bool _ownsHandle;
+        private bool _isAsync;
+        private string _path;
+        private SftpSession _session;
 
         // Buffer information.
-        private readonly int _readBufferSize;
-        private byte[] _readBuffer;
-        private readonly int _writeBufferSize;
-        private byte[] _writeBuffer;
-        private int _bufferPosition;
+        private int _bufferSize;
+        private byte[] _buffer;
+        private int _bufferPosn;
         private int _bufferLen;
         private long _position;
         private bool _bufferOwnedByWrite;
-        private bool _canRead;
         private bool _canSeek;
-        private bool _canWrite;
 
-        private readonly object _lock = new object();
+        private SftpFileAttributes _attributes;
+
+        private object _lock = new object();
 
         /// <summary>
         /// Gets a value indicating whether the current stream supports reading.
         /// </summary>
-        /// <returns>
-        /// <c>true</c> if the stream supports reading; otherwise, <c>false</c>.
-        /// </returns>
+        /// <returns>true if the stream supports reading; otherwise, false.</returns>
         public override bool CanRead
         {
-            get { return _canRead; }
+            get
+            {
+                return ((this._access & FileAccess.Read) != 0);
+            }
         }
 
         /// <summary>
         /// Gets a value indicating whether the current stream supports seeking.
         /// </summary>
-        /// <returns>
-        /// <c>true</c> if the stream supports seeking; otherwise, <c>false</c>.
-        /// </returns>
+        /// <returns>true if the stream supports seeking; otherwise, false.</returns>
         public override bool CanSeek
         {
-            get { return _canSeek; }
+            get
+            {
+                return this._canSeek;
+            }
         }
 
         /// <summary>
         /// Gets a value indicating whether the current stream supports writing.
         /// </summary>
-        /// <returns>
-        /// <c>true</c> if the stream supports writing; otherwise, <c>false</c>.
-        /// </returns>
+        /// <returns>true if the stream supports writing; otherwise, false.</returns>
         public override bool CanWrite
         {
-            get { return _canWrite; }
-        }
-
-        /// <summary>
-        /// Indicates whether timeout properties are usable for <see cref="SftpFileStream"/>.
-        /// </summary>
-        /// <value>
-        /// <c>true</c> in all cases.
-        /// </value>
-        public override bool CanTimeout
-        {
-            get { return true; }
+            get
+            {
+                return ((this._access & FileAccess.Write) != 0);
+            }
         }
 
         /// <summary>
         /// Gets the length in bytes of the stream.
         /// </summary>
         /// <returns>A long value representing the length of the stream in bytes.</returns>
-        /// <exception cref="NotSupportedException">A class derived from Stream does not support seeking. </exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed. </exception>
-        /// <exception cref="IOException">IO operation failed. </exception>
-        [SuppressMessage("Microsoft.Design", "CA1065:DoNotRaiseExceptionsInUnexpectedLocations", Justification = "Be design this is the exception that stream need to throw.")]
+        ///   
+        /// <exception cref="T:System.NotSupportedException">A class derived from Stream does not support seeking. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         public override long Length
         {
             get
             {
-                // Lock down the file stream while we do this.
-                lock (_lock)
+                // Validate that the object can actually do this.
+                if (!this._canSeek)
                 {
-                    CheckSessionIsOpen();
+                    throw new NotSupportedException("Seek operation is not supported.");
+                }
 
-                    if (!CanSeek)
-                        throw new NotSupportedException("Seek operation is not supported.");
+                // Lock down the file stream while we do this.
+                lock (this._lock)
+                {
+                    if (this._handle == null)
+                    {
+                        // ECMA says this should be IOException even though
+                        // everywhere else uses ObjectDisposedException.
+                        throw new IOException("Stream is closed.");
+                    }
 
                     // Flush the write buffer, because it may
                     // affect the length of the stream.
-                    if (_bufferOwnedByWrite)
+                    if (this._bufferOwnedByWrite)
                     {
-                        FlushWriteBuffer();
+                        this.FlushWriteBuffer();
                     }
 
-                    // obtain file attributes
-                    var attributes = _session.RequestFStat(_handle, true);
-                    if (attributes != null)
+                    //  Update file attributes
+                    this._attributes = this._session.RequestFStat(this._handle);
+
+                    if (this._attributes != null && this._attributes.Size > -1)
                     {
-                        return attributes.Size;
+                        return this._attributes.Size;
                     }
-                    throw new IOException("Seek operation failed.");
+                    else
+                    {
+                        throw new IOException("Seek operation failed.");
+                    }
                 }
             }
         }
@@ -117,44 +124,56 @@ namespace Renci.SshNet.Sftp
         /// Gets or sets the position within the current stream.
         /// </summary>
         /// <returns>The current position within the stream.</returns>
-        /// <exception cref="IOException">An I/O error occurs. </exception>
-        /// <exception cref="NotSupportedException">The stream does not support seeking. </exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed. </exception>
+        ///   
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The stream does not support seeking. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         public override long Position
         {
             get
             {
-                CheckSessionIsOpen();
-                if (!CanSeek)
+                if (!this._canSeek)
+                {
                     throw new NotSupportedException("Seek operation not supported.");
-                return _position;
+                }
+                return this._position;
             }
             set
             {
-                Seek(value, SeekOrigin.Begin);
+                this.Seek(value, SeekOrigin.Begin);
             }
         }
 
         /// <summary>
-        /// Gets the name of the path that was used to construct the current <see cref="SftpFileStream"/>.
+        /// Gets a value indicating whether the FileStream was opened asynchronously or synchronously.
         /// </summary>
         /// <value>
-        /// The name of the path that was used to construct the current <see cref="SftpFileStream"/>.
+        ///   <c>true</c> if this instance is async; otherwise, <c>false</c>.
         /// </value>
+        public virtual bool IsAsync
+        {
+            get
+            {
+                return this._isAsync;
+            }
+        }
+
+        /// <summary>
+        /// Gets the name of the FileStream that was passed to the constructor.
+        /// </summary>
         public string Name { get; private set; }
 
         /// <summary>
-        /// Gets the operating system file handle for the file that the current <see cref="SftpFileStream"/> encapsulates.
+        /// Gets the operating system file handle for the file that the current SftpFileStream object encapsulates.
         /// </summary>
-        /// <value>
-        /// The operating system file handle for the file that the current <see cref="SftpFileStream"/> encapsulates.
-        /// </value>
         public virtual byte[] Handle
         {
             get
             {
-                Flush();
-                return _handle;
+                this.Flush();
+                return this._handle;
             }
         }
 
@@ -166,23 +185,60 @@ namespace Renci.SshNet.Sftp
         /// </value>
         public TimeSpan Timeout { get; set; }
 
-        internal SftpFileStream(ISftpSession session, string path, FileMode mode, FileAccess access, int bufferSize)
+        internal SftpFileStream(SftpSession session, string path, FileMode mode)
+            : this(session, path, mode, FileAccess.ReadWrite, 4096, false)
         {
-            if (session == null)
-                throw new SshConnectionException("Client not connected.");
-            if (path == null)
-                throw new ArgumentNullException("path");
-            if (bufferSize <= 0)
-                throw new ArgumentOutOfRangeException("bufferSize");
+            // Nothing to do here.
+        }
 
-            Timeout = TimeSpan.FromSeconds(30);
-            Name = path;
+        internal SftpFileStream(SftpSession session, string path, FileMode mode, FileAccess access)
+            : this(session, path, mode, access, 4096, false)
+        {
+            // Nothing to do here.
+        }
+
+        internal SftpFileStream(SftpSession session, string path, FileMode mode, FileAccess access, int bufferSize)
+            : this(session, path, mode, access, bufferSize, false)
+        {
+            // Nothing to do here.
+        }
+
+        internal SftpFileStream(SftpSession session, string path, FileMode mode, FileAccess access, int bufferSize, bool useAsync)
+        {
+            // Validate the parameters.
+            if (path == null)
+            {
+                throw new ArgumentNullException("path");
+            }
+            if (bufferSize <= 0)
+            {
+                throw new ArgumentOutOfRangeException("bufferSize");
+            }
+            if (access < FileAccess.Read || access > FileAccess.ReadWrite)
+            {
+                throw new ArgumentOutOfRangeException("access");
+            }
+            if (mode < FileMode.CreateNew || mode > FileMode.Append)
+            {
+                throw new ArgumentOutOfRangeException("mode");
+            }
+
+            this.Timeout = TimeSpan.FromSeconds(30);
+            this.Name = path;
 
             // Initialize the object state.
-            _session = session;
-            _canRead = (access & FileAccess.Read) != 0;
-            _canSeek = true;
-            _canWrite = (access & FileAccess.Write) != 0;
+            this._session = session;
+            this._access = access;
+            this._ownsHandle = true;
+            this._isAsync = useAsync;
+            this._path = path;
+            this._bufferSize = bufferSize;
+            this._buffer = new byte[bufferSize];
+            this._bufferPosn = 0;
+            this._bufferLen = 0;
+            this._bufferOwnedByWrite = false;
+            this._canSeek = true;
+            this._position = 0;
 
             var flags = Flags.None;
 
@@ -199,34 +255,17 @@ namespace Renci.SshNet.Sftp
                     flags |= Flags.Write;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("access");
-            }
-
-            if ((access & FileAccess.Read) != 0 && mode == FileMode.Append)
-            {
-                throw new ArgumentException(string.Format("{0} mode can be requested only when combined with write-only access.", mode.ToString("G")));
-            }
-
-            if ((access & FileAccess.Write) == 0)
-            {
-                if (mode == FileMode.Create || mode == FileMode.CreateNew || mode == FileMode.Truncate || mode == FileMode.Append)
-                {
-                    throw new ArgumentException(string.Format("Combining {0}: {1} with {2}: {3} is invalid.",
-                        typeof(FileMode).Name,
-                        mode,
-                        typeof(FileAccess).Name,
-                        access));
-                }
+                    break;
             }
 
             switch (mode)
             {
                 case FileMode.Append:
-                    flags |= Flags.Append | Flags.CreateNewOrOpen;
+                    flags |= Flags.Append;
                     break;
                 case FileMode.Create:
-                    _handle = _session.RequestOpen(path, flags | Flags.Truncate, true);
-                    if (_handle == null)
+                    this._handle = this._session.RequestOpen(path, flags | Flags.Truncate, true);
+                    if (this._handle == null)
                     {
                         flags |= Flags.CreateNew;
                     }
@@ -247,23 +286,17 @@ namespace Renci.SshNet.Sftp
                     flags |= Flags.Truncate;
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException("mode");
+                    break;
             }
 
-            if (_handle == null)
-                _handle = _session.RequestOpen(path, flags);
+            if (this._handle == null)
+                this._handle = this._session.RequestOpen(this._path, flags);
 
-            // instead of using the specified buffer size as is, we use it to calculate a buffer size
-            // that ensures we always receive or send the max. number of bytes in a single SSH_FXP_READ
-            // or SSH_FXP_WRITE message
-
-            _readBufferSize = (int) session.CalculateOptimalReadLength((uint) bufferSize);
-            _writeBufferSize = (int) session.CalculateOptimalWriteLength((uint) bufferSize, _handle);
+            this._attributes = this._session.RequestFStat(this._handle);
 
             if (mode == FileMode.Append)
             {
-                var attributes = _session.RequestFStat(_handle, false);
-                _position = attributes.Size;
+                this._position = this._attributes.Size;
             }
         }
 
@@ -273,168 +306,226 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         ~SftpFileStream()
         {
-            Dispose(false);
+            this.Dispose(false);
+        }
+
+        /// <summary>
+        /// Begins an asynchronous read operation.
+        /// </summary>
+        /// <param name="buffer">The buffer to read the data into.</param>
+        /// <param name="offset">The byte offset in <paramref name="buffer"/> at which to begin writing data read from the stream.</param>
+        /// <param name="count">The maximum number of bytes to read.</param>
+        /// <param name="callback">An optional asynchronous callback, to be called when the read is complete.</param>
+        /// <param name="state">A user-provided object that distinguishes this particular asynchronous read request from other requests.</param>
+        /// <returns>
+        /// An <see cref="T:System.IAsyncResult"/> that represents the asynchronous read, which could still be pending.
+        /// </returns>
+        /// <exception cref="T:System.IO.IOException">Attempted an asynchronous read past the end of the stream, or a disk error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentException">One or more of the arguments is invalid. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The current Stream implementation does not support the read operation. </exception>
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, Object state)
+        {
+            return base.BeginRead(buffer, offset, count, callback, state);
+        }
+
+        /// <summary>
+        /// Waits for the pending asynchronous read to complete.
+        /// </summary>
+        /// <param name="asyncResult">The reference to the pending asynchronous request to finish.</param>
+        /// <returns>
+        /// The number of bytes read from the stream, between zero (0) and the number of bytes you requested. Streams return zero (0) only at the end of the stream, otherwise, they should block until at least one byte is available.
+        /// </returns>
+        /// <exception cref="T:System.ArgumentNullException">
+        ///   <paramref name="asyncResult"/> is null. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentException">
+        ///   <paramref name="asyncResult"/> did not originate from a <see cref="M:System.IO.Stream.BeginRead(System.Byte[],System.Int32,System.Int32,System.AsyncCallback,System.Object)"/> method on the current stream. </exception>
+        ///   
+        /// <exception cref="T:System.IO.IOException">The stream is closed or an internal error has occurred.</exception>
+        public override int EndRead(IAsyncResult asyncResult)
+        {
+            return base.EndRead(asyncResult);
+        }
+
+        /// <summary>
+        /// Begins an asynchronous write operation.
+        /// </summary>
+        /// <param name="buffer">The buffer to write data from.</param>
+        /// <param name="offset">The byte offset in <paramref name="buffer"/> from which to begin writing.</param>
+        /// <param name="count">The maximum number of bytes to write.</param>
+        /// <param name="callback">An optional asynchronous callback, to be called when the write is complete.</param>
+        /// <param name="state">A user-provided object that distinguishes this particular asynchronous write request from other requests.</param>
+        /// <returns>
+        /// An IAsyncResult that represents the asynchronous write, which could still be pending.
+        /// </returns>
+        /// <exception cref="T:System.IO.IOException">Attempted an asynchronous write past the end of the stream, or a disk error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentException">One or more of the arguments is invalid. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The current Stream implementation does not support the write operation. </exception>
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, Object state)
+        {
+            return base.BeginWrite(buffer, offset, count, callback, state);
+        }
+
+        /// <summary>
+        /// Ends an asynchronous write operation.
+        /// </summary>
+        /// <param name="asyncResult">A reference to the outstanding asynchronous I/O request.</param>
+        /// <exception cref="T:System.ArgumentNullException">
+        ///   <paramref name="asyncResult"/> is null. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentException">
+        ///   <paramref name="asyncResult"/> did not originate from a <see cref="M:System.IO.Stream.BeginWrite(System.Byte[],System.Int32,System.Int32,System.AsyncCallback,System.Object)"/> method on the current stream. </exception>
+        ///   
+        /// <exception cref="T:System.IO.IOException">The stream is closed or an internal error has occurred.</exception>
+        public override void EndWrite(IAsyncResult asyncResult)
+        {
+            base.EndWrite(asyncResult);
+        }
+
+        /// <summary>
+        /// Closes the current stream and releases any resources (such as sockets and file handles) associated with the current stream.
+        /// </summary>
+        public override void Close()
+        {
+            this.Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         /// <summary>
         /// Clears all buffers for this stream and causes any buffered data to be written to the file.
         /// </summary>
-        /// <exception cref="IOException">An I/O error occurs. </exception>
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
         /// <exception cref="ObjectDisposedException">Stream is closed.</exception>
         public override void Flush()
         {
-            lock (_lock)
+            lock (this._lock)
             {
-                CheckSessionIsOpen();
-
-                if (_bufferOwnedByWrite)
+                if (this._handle != null)
                 {
-                    FlushWriteBuffer();
+                    if (this._bufferOwnedByWrite)
+                    {
+                        this.FlushWriteBuffer();
+                    }
+                    else
+                    {
+                        this.FlushReadBuffer();
+                    }
                 }
                 else
                 {
-                    FlushReadBuffer();
+                    throw new ObjectDisposedException("Stream is closed.");
                 }
             }
         }
 
         /// <summary>
-        /// Reads a sequence of bytes from the current stream and advances the position within the stream by the
-        /// number of bytes read.
+        /// Reads a sequence of bytes from the current stream and advances the position within the stream by the number of bytes read.
         /// </summary>
         /// <param name="buffer">An array of bytes. When this method returns, the buffer contains the specified byte array with the values between <paramref name="offset"/> and (<paramref name="offset"/> + <paramref name="count"/> - 1) replaced by the bytes read from the current source.</param>
         /// <param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin storing the data read from the current stream.</param>
         /// <param name="count">The maximum number of bytes to be read from the current stream.</param>
         /// <returns>
-        /// The total number of bytes read into the buffer. This can be less than the number of bytes requested
-        /// if that many bytes are not currently available, or zero (0) if the end of the stream has been reached.
+        /// The total number of bytes read into the buffer. This can be less than the number of bytes requested if that many bytes are not currently available, or zero (0) if the end of the stream has been reached.
         /// </returns>
-        /// <exception cref="ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is larger than the buffer length.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <c>null</c>. </exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="offset"/> or <paramref name="count"/> is negative.</exception>
-        /// <exception cref="IOException">An I/O error occurs. </exception>
-        /// <exception cref="NotSupportedException">The stream does not support reading. </exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed. </exception>
-        /// <remarks>
-        /// <para>
-        /// This method attempts to read up to <paramref name="count"/> bytes. This either from the buffer, from the
-        /// server (using one or more <c>SSH_FXP_READ</c> requests) or using a combination of both.
-        /// </para>
-        /// <para>
-        /// The read loop is interrupted when either <paramref name="count"/> bytes are read, the server returns zero
-        /// bytes (EOF) or less bytes than the read buffer size.
-        /// </para>
-        /// <para>
-        /// When a server returns less number of bytes than the read buffer size, this <c>may</c> indicate that EOF has
-        /// been reached. A subsequent (<c>SSH_FXP_READ</c>) server request is necessary to make sure EOF has effectively
-        /// been reached.  Breaking out of the read loop avoids reading from the server twice to determine EOF: once in
-        /// the read loop, and once upon the next <see cref="Read"/> or <see cref="ReadByte"/> invocation.
-        /// </para>
-        /// </remarks>
+        /// <exception cref="T:System.ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is larger than the buffer length. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentNullException">
+        ///   <paramref name="buffer"/> is null. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentOutOfRangeException">
+        ///   <paramref name="offset"/> or <paramref name="count"/> is negative. </exception>
+        ///   
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The stream does not support reading. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         public override int Read(byte[] buffer, int offset, int count)
         {
-            var readLen = 0;
+            int readLen = 0;
+            int tempLen;
 
             if (buffer == null)
+            {
                 throw new ArgumentNullException("buffer");
-            if (offset < 0)
+            }
+            else if (offset < 0)
+            {
                 throw new ArgumentOutOfRangeException("offset");
-            if (count < 0)
+            }
+            else if (count < 0)
+            {
                 throw new ArgumentOutOfRangeException("count");
-            if ((buffer.Length - offset) < count)
+            }
+            else if ((buffer.Length - offset) < count)
+            {
                 throw new ArgumentException("Invalid array range.");
+            }
 
             // Lock down the file stream while we do this.
-            lock (_lock)
+            lock (this._lock)
             {
-                CheckSessionIsOpen();
-
                 // Set up for the read operation.
-                SetupRead();
+                this.SetupRead();
 
                 // Read data into the caller's buffer.
                 while (count > 0)
                 {
                     // How much data do we have available in the buffer?
-                    var bytesAvailableInBuffer = _bufferLen - _bufferPosition;
-                    if (bytesAvailableInBuffer <= 0)
+                    tempLen = this._bufferLen - this._bufferPosn;
+                    if (tempLen <= 0)
                     {
-                        var data = _session.RequestRead(_handle, (ulong) _position, (uint) _readBufferSize);
+                        this._bufferPosn = 0;
 
-                        if (data.Length == 0)
+                        var data = this._session.RequestRead(this._handle, (ulong)this.Position, (uint)this._bufferSize);
+                        
+                        this._bufferLen = data.Length;
+                        
+                        Buffer.BlockCopy(data, 0, this._buffer, 0, this._bufferLen);
+
+                        if (this._bufferLen < 0)
                         {
-                            _bufferPosition = 0;
-                            _bufferLen = 0;
-
-                            break;
+                            this._bufferLen = 0;
+                            //  TODO:   Add SFTP error code or message if possible
+                            throw new IOException("Read operation failed.");
                         }
-
-                        var bytesToWriteToCallerBuffer = count;
-                        if (bytesToWriteToCallerBuffer >= data.Length)
+                        else if (this._bufferLen == 0)
                         {
-                            // write all data read to caller-provided buffer
-                            bytesToWriteToCallerBuffer = data.Length;
-                            // reset buffer since we will skip buffering
-                            _bufferPosition = 0;
-                            _bufferLen = 0;
+                            break;
                         }
                         else
                         {
-                            // determine number of bytes that we should write into read buffer
-                            var bytesToWriteToReadBuffer = data.Length - bytesToWriteToCallerBuffer;
-                            // write remaining bytes to read buffer
-                            Buffer.BlockCopy(data, count, GetOrCreateReadBuffer(), 0, bytesToWriteToReadBuffer);
-                            // update position in read buffer
-                            _bufferPosition = 0;
-                            // update number of bytes in read buffer
-                            _bufferLen = bytesToWriteToReadBuffer;
+                            tempLen = this._bufferLen;
                         }
-
-                        // write bytes to caller-provided buffer
-                        Buffer.BlockCopy(data, 0, buffer, offset, bytesToWriteToCallerBuffer);
-                        // update stream position
-                        _position += bytesToWriteToCallerBuffer;
-                        // record total number of bytes read into caller-provided buffer
-                        readLen += bytesToWriteToCallerBuffer;
-
-                        // break out of the read loop when the server returned less than the request number of bytes
-                        // as that *may* indicate that we've reached EOF
-                        //
-                        // doing this avoids reading from server twice to determine EOF: once in the read loop, and
-                        // once upon the next Read or ReadByte invocation by the caller
-                        if (data.Length < _readBufferSize)
-                        {
-                            break;
-                        }
-
-                        // advance offset to start writing bytes into caller-provided buffer
-                        offset += bytesToWriteToCallerBuffer;
-                        // update number of bytes left to read into caller-provided buffer
-                        count -= bytesToWriteToCallerBuffer;
                     }
-                    else
+
+                    // Don't read more than the caller wants.
+                    if (tempLen > count)
                     {
-                        // limit the number of bytes to use from read buffer to the caller-request number of bytes
-                        if (bytesAvailableInBuffer > count)
-                            bytesAvailableInBuffer = count;
-
-                        // copy data from read buffer to the caller-provided buffer
-                        Buffer.BlockCopy(GetOrCreateReadBuffer(), _bufferPosition, buffer, offset, bytesAvailableInBuffer);
-                        // update position in read buffer
-                        _bufferPosition += bytesAvailableInBuffer;
-                        // update stream position
-                        _position += bytesAvailableInBuffer;
-                        // record total number of bytes read into caller-provided buffer
-                        readLen += bytesAvailableInBuffer;
-                        // advance offset to start writing bytes into caller-provided buffer
-                        offset += bytesAvailableInBuffer;
-                        // update number of bytes left to read
-                        count -= bytesAvailableInBuffer;
+                        tempLen = count;
                     }
+
+                    // Copy stream data to the caller's buffer.
+                    Buffer.BlockCopy(this._buffer, this._bufferPosn, buffer, offset, tempLen);
+
+                    // Advance to the next buffer positions.
+                    readLen += tempLen;
+                    offset += tempLen;
+                    count -= tempLen;
+                    this._bufferPosn += tempLen;
+                    this._position += tempLen;
                 }
             }
 
-            // return the number of bytes that were read to the caller.
+            // Return the number of bytes that were read to the caller.
             return readLen;
         }
 
@@ -442,47 +533,46 @@ namespace Renci.SshNet.Sftp
         /// Reads a byte from the stream and advances the position within the stream by one byte, or returns -1 if at the end of the stream.
         /// </summary>
         /// <returns>
-        /// The unsigned byte cast to an <see cref="int"/>, or -1 if at the end of the stream.
+        /// The unsigned byte cast to an Int32, or -1 if at the end of the stream.
         /// </returns>
-        /// <exception cref="NotSupportedException">The stream does not support reading. </exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed. </exception>
-        /// <exception cref="IOException">Read operation failed.</exception>
+        /// <exception cref="T:System.NotSupportedException">The stream does not support reading. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
+        /// <exception cref="System.IO.IOException">Read operation failed.</exception>
         public override int ReadByte()
         {
             // Lock down the file stream while we do this.
-            lock (_lock)
+            lock (this._lock)
             {
-                CheckSessionIsOpen();
-
                 // Setup the object for reading.
-                SetupRead();
-
-                byte[] readBuffer;
+                this.SetupRead();
 
                 // Read more data into the internal buffer if necessary.
-                if (_bufferPosition >= _bufferLen)
+                if (this._bufferPosn >= this._bufferLen)
                 {
-                    var data = _session.RequestRead(_handle, (ulong) _position, (uint) _readBufferSize);
-                    if (data.Length == 0)
+                    this._bufferPosn = 0;
+
+                    var data = this._session.RequestRead(this._handle, (ulong)this.Position, (uint)this._bufferSize);
+
+                    this._bufferLen = data.Length;
+                    Buffer.BlockCopy(data, 0, this._buffer, 0, this._bufferSize);
+
+                    if (this._bufferLen < 0)
+                    {
+                        this._bufferLen = 0;
+                        //  TODO:   Add SFTP error code or message if possible
+                        throw new IOException("Read operation failed.");
+                    }
+                    else if (this._bufferLen == 0)
                     {
                         // We've reached EOF.
                         return -1;
                     }
-
-                    readBuffer = GetOrCreateReadBuffer();
-                    Buffer.BlockCopy(data, 0, readBuffer, 0, data.Length);
-
-                    _bufferPosition = 0;
-                    _bufferLen = data.Length;
-                }
-                else
-                {
-                    readBuffer = GetOrCreateReadBuffer();
                 }
 
                 // Extract the next byte from the buffer.
-                ++_position;
-                return readBuffer[_bufferPosition++];
+                ++this._position;
+                return this._buffer[this._bufferPosn++];
             }
         }
 
@@ -490,40 +580,51 @@ namespace Renci.SshNet.Sftp
         /// Sets the position within the current stream.
         /// </summary>
         /// <param name="offset">A byte offset relative to the <paramref name="origin"/> parameter.</param>
-        /// <param name="origin">A value of type <see cref="SeekOrigin"/> indicating the reference point used to obtain the new position.</param>
+        /// <param name="origin">A value of type <see cref="T:System.IO.SeekOrigin"/> indicating the reference point used to obtain the new position.</param>
         /// <returns>
         /// The new position within the current stream.
         /// </returns>
-        /// <exception cref="IOException">An I/O error occurs. </exception>
-        /// <exception cref="NotSupportedException">The stream does not support seeking, such as if the stream is constructed from a pipe or console output. </exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed. </exception>
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The stream does not support seeking, such as if the stream is constructed from a pipe or console output. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         public override long Seek(long offset, SeekOrigin origin)
         {
             long newPosn = -1;
 
-            // Lock down the file stream while we do this.
-            lock (_lock)
+            // Bail out if this stream is not capable of seeking.
+            if (!this._canSeek)
             {
-                CheckSessionIsOpen();
+                throw new NotSupportedException("Seek is not supported.");
+            }
 
-                if (!CanSeek)
-                    throw new NotSupportedException("Seek is not supported.");
+            // Lock down the file stream while we do this.
+            lock (this._lock)
+            {
+                // Bail out if the handle is invalid.
+                if (this._handle == null)
+                {
+                    throw new ObjectDisposedException("Stream is closed.");
+                }
 
                 // Don't do anything if the position won't be moving.
-                if (origin == SeekOrigin.Begin && offset == _position)
+                if (origin == SeekOrigin.Begin && offset == this._position)
                 {
                     return offset;
                 }
-                if (origin == SeekOrigin.Current && offset == 0)
+                else if (origin == SeekOrigin.Current && offset == 0)
                 {
-                    return _position;
+                    return this._position;
                 }
 
+                this._attributes = this._session.RequestFStat(this._handle);
+
                 // The behaviour depends upon the read/write mode.
-                if (_bufferOwnedByWrite)
+                if (this._bufferOwnedByWrite)
                 {
                     // Flush the write buffer and then seek.
-                    FlushWriteBuffer();
+                    this.FlushWriteBuffer();
 
                     switch (origin)
                     {
@@ -531,11 +632,12 @@ namespace Renci.SshNet.Sftp
                             newPosn = offset;
                             break;
                         case SeekOrigin.Current:
-                            newPosn = _position + offset;
+                            newPosn = this._position + offset;
                             break;
                         case SeekOrigin.End:
-                            var attributes = _session.RequestFStat(_handle, false);
-                            newPosn = attributes.Size - offset;
+                            newPosn = this._attributes.Size - offset;
+                            break;
+                        default:
                             break;
                     }
 
@@ -543,7 +645,7 @@ namespace Renci.SshNet.Sftp
                     {
                         throw new EndOfStreamException("End of stream.");
                     }
-                    _position = newPosn;
+                    this._position = newPosn;
                 }
                 else
                 {
@@ -551,29 +653,31 @@ namespace Renci.SshNet.Sftp
                     // the current read buffer bounds.
                     if (origin == SeekOrigin.Begin)
                     {
-                        newPosn = _position - _bufferPosition;
-                        if (offset >= newPosn && offset < (newPosn + _bufferLen))
+                        newPosn = this._position - this._bufferPosn;
+                        if (offset >= newPosn && offset <
+                                (newPosn + this._bufferLen))
                         {
-                            _bufferPosition = (int)(offset - newPosn);
-                            _position = offset;
-                            return _position;
+                            this._bufferPosn = (int)(offset - newPosn);
+                            this._position = offset;
+                            return this._position;
                         }
                     }
                     else if (origin == SeekOrigin.Current)
                     {
-                        newPosn = _position + offset;
-                        if (newPosn >= (_position - _bufferPosition) &&
-                           newPosn < (_position - _bufferPosition + _bufferLen))
+                        newPosn = this._position + offset;
+                        if (newPosn >= (this._position - this._bufferPosn) &&
+                           newPosn < (this._position - this._bufferPosn + this._bufferLen))
                         {
-                            _bufferPosition = (int) (newPosn - (_position - _bufferPosition));
-                            _position = newPosn;
-                            return _position;
+                            this._bufferPosn =
+                                (int)(newPosn - (this._position - this._bufferPosn));
+                            this._position = newPosn;
+                            return this._position;
                         }
                     }
 
                     // Abandon the read buffer.
-                    _bufferPosition = 0;
-                    _bufferLen = 0;
+                    this._bufferPosn = 0;
+                    this._bufferLen = 0;
 
                     // Seek to the new position.
                     switch (origin)
@@ -582,11 +686,12 @@ namespace Renci.SshNet.Sftp
                             newPosn = offset;
                             break;
                         case SeekOrigin.Current:
-                            newPosn = _position + offset;
+                            newPosn = this._position + offset;
                             break;
                         case SeekOrigin.End:
-                            var attributes = _session.RequestFStat(_handle, false);
-                            newPosn = attributes.Size - offset;
+                            newPosn = this._attributes.Size - offset;
+                            break;
+                        default:
                             break;
                     }
 
@@ -595,63 +700,43 @@ namespace Renci.SshNet.Sftp
                         throw new EndOfStreamException();
                     }
 
-                    _position = newPosn;
+                    this._position = newPosn;
                 }
-                return _position;
+                return this._position;
             }
         }
 
         /// <summary>
-        /// Sets the length of the current stream.
+        /// When overridden in a derived class, sets the length of the current stream.
         /// </summary>
         /// <param name="value">The desired length of the current stream in bytes.</param>
-        /// <exception cref="IOException">An I/O error occurs.</exception>
-        /// <exception cref="NotSupportedException">The stream does not support both writing and seeking.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The stream does not support both writing and seeking, such as if the stream is constructed from a pipe or console output. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="value"/> must be greater than zero.</exception>
-        /// <remarks>
-        /// <para>
-        /// Buffers are first flushed.
-        /// </para>
-        /// <para>
-        /// If the specified value is less than the current length of the stream, the stream is truncated and - if the
-        /// current position is greater than the new length - the current position is moved to the last byte of the stream.
-        /// </para>
-        /// <para>
-        /// If the given value is greater than the current length of the stream, the stream is expanded and the current
-        /// position remains the same.
-        /// </para>
-        /// </remarks>
         public override void SetLength(long value)
         {
+            // Validate the parameters and setup the object for writing.
             if (value < 0)
+            {
                 throw new ArgumentOutOfRangeException("value");
+            }
+            if (!this._canSeek)
+            {
+                throw new NotSupportedException("Seek is not supported.");
+            }
 
             // Lock down the file stream while we do this.
-            lock (_lock)
+            lock (this._lock)
             {
-                CheckSessionIsOpen();
+                // Setup this object for writing.
+                this.SetupWrite();
 
-                if (!CanSeek)
-                    throw new NotSupportedException("Seek is not supported.");
+                this._attributes.Size = value;
 
-                if (_bufferOwnedByWrite)
-                {
-                    FlushWriteBuffer();
-                }
-                else
-                {
-                    SetupWrite();
-                }
-
-                var attributes = _session.RequestFStat(_handle, false);
-                attributes.Size = value;
-                _session.RequestFSetStat(_handle, attributes);
-
-                if (_position > value)
-                {
-                    _position = value;
-                }
+                this._session.RequestFSetStat(this._handle, this._attributes);
             }
         }
 
@@ -661,81 +746,111 @@ namespace Renci.SshNet.Sftp
         /// <param name="buffer">An array of bytes. This method copies <paramref name="count"/> bytes from <paramref name="buffer"/> to the current stream.</param>
         /// <param name="offset">The zero-based byte offset in <paramref name="buffer"/> at which to begin copying bytes to the current stream.</param>
         /// <param name="count">The number of bytes to be written to the current stream.</param>
-        /// <exception cref="ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is greater than the buffer length.</exception>
-        /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <c>null</c>.</exception>
-        /// <exception cref="ArgumentOutOfRangeException"><paramref name="offset"/> or <paramref name="count"/> is negative.</exception>
-        /// <exception cref="IOException">An I/O error occurs.</exception>
-        /// <exception cref="NotSupportedException">The stream does not support writing.</exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed.</exception>
+        /// <exception cref="T:System.ArgumentException">The sum of <paramref name="offset"/> and <paramref name="count"/> is greater than the buffer length. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentNullException">
+        ///   <paramref name="buffer"/> is null. </exception>
+        ///   
+        /// <exception cref="T:System.ArgumentOutOfRangeException">
+        ///   <paramref name="offset"/> or <paramref name="count"/> is negative. </exception>
+        ///   
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The stream does not support writing. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         public override void Write(byte[] buffer, int offset, int count)
         {
+            int tempLen;
+
+            // Validate the parameters
             if (buffer == null)
+            {
                 throw new ArgumentNullException("buffer");
-            if (offset < 0)
+            }
+            else if (offset < 0)
+            {
                 throw new ArgumentOutOfRangeException("offset");
-            if (count < 0)
+            }
+            else if (count < 0)
+            {
                 throw new ArgumentOutOfRangeException("count");
-            if ((buffer.Length - offset) < count)
+            }
+            else if ((buffer.Length - offset) < count)
+            {
                 throw new ArgumentException("Invalid array range.");
+            }
 
             // Lock down the file stream while we do this.
-            lock (_lock)
+            lock (this._lock)
             {
-                CheckSessionIsOpen();
-
                 // Setup this object for writing.
-                SetupWrite();
+                this.SetupWrite();
 
                 // Write data to the file stream.
                 while (count > 0)
                 {
                     // Determine how many bytes we can write to the buffer.
-                    var tempLen = _writeBufferSize - _bufferPosition;
+                    tempLen = this._bufferSize - this._bufferPosn;
                     if (tempLen <= 0)
                     {
-                        // flush write buffer, and mark it empty
-                        FlushWriteBuffer();
-                        // we can now write or buffer the full buffer size
-                        tempLen = _writeBufferSize;
-                    }
+                        var data = new byte[this._bufferPosn];
 
-                    // limit the number of bytes to write to the actual number of bytes requested
+                        Buffer.BlockCopy(this._buffer, 0, data, 0, this._bufferPosn);
+
+                        using (var wait = new AutoResetEvent(false))
+                        {
+                            this._session.RequestWrite(this._handle, (ulong)this.Position, data);
+                        }
+
+                        this._bufferPosn = 0;
+                        tempLen = this._bufferSize;
+                    }
                     if (tempLen > count)
                     {
                         tempLen = count;
                     }
 
                     // Can we short-cut the internal buffer?
-                    if (_bufferPosition == 0 && tempLen == _writeBufferSize)
+                    if (this._bufferPosn == 0 && tempLen == this._bufferSize)
                     {
+                        // Yes: write the data directly to the file.
+                        var data = new byte[tempLen];
+
+                        Buffer.BlockCopy(buffer, offset, data, 0, tempLen);
+
                         using (var wait = new AutoResetEvent(false))
                         {
-                            _session.RequestWrite(_handle, (ulong) _position, buffer, offset, tempLen, wait);
+                            this._session.RequestWrite(this._handle, (ulong)this.Position, data);
                         }
                     }
                     else
                     {
                         // No: copy the data to the write buffer first.
-                        Buffer.BlockCopy(buffer, offset, GetOrCreateWriteBuffer(), _bufferPosition, tempLen);
-                        _bufferPosition += tempLen;
+                        Buffer.BlockCopy(buffer, offset, this._buffer, this._bufferPosn, tempLen);
+                        this._bufferPosn += tempLen;
                     }
 
                     // Advance the buffer and stream positions.
-                    _position += tempLen;
+                    this._position += tempLen;
                     offset += tempLen;
                     count -= tempLen;
                 }
 
                 // If the buffer is full, then do a speculative flush now,
                 // rather than waiting for the next call to this method.
-                if (_bufferPosition >= _writeBufferSize)
+                if (this._bufferPosn >= this._bufferSize)
                 {
+                    var data = new byte[this._bufferPosn];
+
+                    Buffer.BlockCopy(this._buffer, 0, data, 0, this._bufferPosn);
+
                     using (var wait = new AutoResetEvent(false))
                     {
-                        _session.RequestWrite(_handle, (ulong) (_position - _bufferPosition), GetOrCreateWriteBuffer(), 0, _bufferPosition, wait);
+                        this._session.RequestWrite(this._handle, (ulong)this.Position, data);
                     }
 
-                    _bufferPosition = 0;
+                    this._bufferPosn = 0;
                 }
             }
         }
@@ -744,92 +859,64 @@ namespace Renci.SshNet.Sftp
         /// Writes a byte to the current position in the stream and advances the position within the stream by one byte.
         /// </summary>
         /// <param name="value">The byte to write to the stream.</param>
-        /// <exception cref="IOException">An I/O error occurs. </exception>
-        /// <exception cref="NotSupportedException">The stream does not support writing, or the stream is already closed. </exception>
-        /// <exception cref="ObjectDisposedException">Methods were called after the stream was closed. </exception>
+        /// <exception cref="T:System.IO.IOException">An I/O error occurs. </exception>
+        ///   
+        /// <exception cref="T:System.NotSupportedException">The stream does not support writing, or the stream is already closed. </exception>
+        ///   
+        /// <exception cref="T:System.ObjectDisposedException">Methods were called after the stream was closed. </exception>
         public override void WriteByte(byte value)
         {
             // Lock down the file stream while we do this.
-            lock (_lock)
+            lock (this._lock)
             {
-                CheckSessionIsOpen();
-
                 // Setup the object for writing.
-                SetupWrite();
-
-                var writeBuffer = GetOrCreateWriteBuffer();
+                this.SetupWrite();
 
                 // Flush the current buffer if it is full.
-                if (_bufferPosition >= _writeBufferSize)
+                if (this._bufferPosn >= this._bufferSize)
                 {
+                    var data = new byte[this._bufferPosn];
+
+                    Buffer.BlockCopy(this._buffer, 0, data, 0, this._bufferPosn);
+
                     using (var wait = new AutoResetEvent(false))
                     {
-                        _session.RequestWrite(_handle, (ulong) (_position - _bufferPosition), writeBuffer, 0, _bufferPosition, wait);
+                        this._session.RequestWrite(this._handle, (ulong)this.Position, data);
                     }
 
-                    _bufferPosition = 0;
+                    this._bufferPosn = 0;
                 }
 
                 // Write the byte into the buffer and advance the posn.
-                writeBuffer[_bufferPosition++] = value;
-                ++_position;
+                this._buffer[this._bufferPosn++] = value;
+                ++this._position;
             }
         }
 
         /// <summary>
-        /// Releases the unmanaged resources used by the <see cref="Stream"/> and optionally releases the managed resources.
+        /// Releases the unmanaged resources used by the <see cref="T:System.IO.Stream"/> and optionally releases the managed resources.
         /// </summary>
-        /// <param name="disposing"><c>true</c> to release both managed and unmanaged resources; <c>false</c> to release only unmanaged resources.</param>
+        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources.</param>
         protected override void Dispose(bool disposing)
         {
             base.Dispose(disposing);
 
-            if (_session != null)
+            lock (this._lock)
             {
-                if (disposing)
+                if (this._handle != null)
                 {
-                    lock (_lock)
+                    if (this._bufferOwnedByWrite)
                     {
-                        if (_session != null)
-                        {
-                            _canRead = false;
-                            _canSeek = false;
-                            _canWrite = false;
-
-                            if (_handle != null)
-                            {
-                                if (_session.IsOpen)
-                                {
-                                    if (_bufferOwnedByWrite)
-                                    {
-                                        FlushWriteBuffer();
-                                    }
-
-                                    _session.RequestClose(_handle);
-                                }
-
-                                _handle = null;
-                            }
-
-                            _session = null;
-                        }
+                        this.FlushWriteBuffer();
                     }
+
+                    if (this._ownsHandle)
+                    {
+                        this._session.RequestClose(this._handle);
+                    }
+                    this._handle = null;
                 }
             }
-        }
-
-        private byte[] GetOrCreateReadBuffer()
-        {
-            if (_readBuffer == null)
-                _readBuffer = new byte[_readBufferSize];
-            return _readBuffer;
-        }
-
-        private byte[] GetOrCreateWriteBuffer()
-        {
-            if (_writeBuffer == null)
-                _writeBuffer = new byte[_writeBufferSize];
-            return _writeBuffer;
         }
 
         /// <summary>
@@ -837,8 +924,15 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         private void FlushReadBuffer()
         {
-            _bufferPosition = 0;
-            _bufferLen = 0;
+            if (this._canSeek)
+            {
+                if (this._bufferPosn < this._bufferLen)
+                {
+                    this._position -= this._bufferPosn;
+                }
+                this._bufferPosn = 0;
+                this._bufferLen = 0;
+            }
         }
 
         /// <summary>
@@ -846,14 +940,18 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         private void FlushWriteBuffer()
         {
-            if (_bufferPosition > 0)
+            if (this._bufferPosn > 0)
             {
+                var data = new byte[this._bufferPosn];
+
+                Buffer.BlockCopy(this._buffer, 0, data, 0, this._bufferPosn);
+
                 using (var wait = new AutoResetEvent(false))
                 {
-                    _session.RequestWrite(_handle, (ulong) (_position - _bufferPosition), _writeBuffer, 0, _bufferPosition, wait);
+                    this._session.RequestWrite(this._handle, (ulong)(this.Position - this._bufferPosn), data);
                 }
 
-                _bufferPosition = 0;
+                this._bufferPosn = 0;
             }
         }
 
@@ -862,13 +960,18 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         private void SetupRead()
         {
-            if (!CanRead)
-                throw new NotSupportedException("Read not supported.");
-
-            if (_bufferOwnedByWrite)
+            if ((this._access & FileAccess.Read) == 0)
             {
-                FlushWriteBuffer();
-                _bufferOwnedByWrite = false;
+                throw new NotSupportedException("Read not supported.");
+            }
+            if (this._handle == null)
+            {
+                throw new ObjectDisposedException("Stream is closed.");
+            }
+            if (this._bufferOwnedByWrite)
+            {
+                this.FlushWriteBuffer();
+                this._bufferOwnedByWrite = false;
             }
         }
 
@@ -877,22 +980,19 @@ namespace Renci.SshNet.Sftp
         /// </summary>
         private void SetupWrite()
         {
-            if ((!CanWrite))
-                throw new NotSupportedException("Write not supported.");
-
-            if (!_bufferOwnedByWrite)
+            if ((this._access & FileAccess.Write) == 0)
             {
-                FlushReadBuffer();
-                _bufferOwnedByWrite = true;
+                throw new NotSupportedException("Write not supported.");
             }
-        }
-
-        private void CheckSessionIsOpen()
-        {
-            if (_session == null)
-                throw new ObjectDisposedException(GetType().FullName);
-            if (!_session.IsOpen)
-                throw new ObjectDisposedException(GetType().FullName, "Cannot access a closed SFTP session.");
+            if (this._handle == null)
+            {
+                throw new ObjectDisposedException("Stream is closed.");
+            }
+            if (!this._bufferOwnedByWrite)
+            {
+                this.FlushReadBuffer();
+                this._bufferOwnedByWrite = true;
+            }
         }
     }
 }
